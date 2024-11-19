@@ -2,7 +2,7 @@ import pickle
 import pandas as pd
 
 # Define the path to the flexibility data file
-data_path = '//data/glycan_graphs.pkl'
+data_path = '/Users/xakdze/PycharmProjects/GlycoShape/data/glycan_graphs.pkl'
 
 # Load glycan flexibility data from the pickle file
 with open(data_path, 'rb') as file:

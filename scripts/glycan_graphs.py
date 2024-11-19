@@ -1,6 +1,7 @@
 import pickle
+from glycowork.motif.draw import GlycoDraw
 
-with open('//data/glycan_graphs.pkl', 'rb') as file:
+with open('/Users/xakdze/PycharmProjects/GlycoShape/data/glycan_graphs.pkl', 'rb') as file:
     data = pickle.load(file)  # Must be 'rb' mode
 
 # Access a specific graph by its key (structure name)
@@ -20,13 +21,5 @@ print("Edges:", edges)
 nodes_with_attributes = list(graph.nodes(data=True))
 print("Nodes with attributes:", nodes_with_attributes)
 
-
-import networkx as nx
-import matplotlib.pyplot as plt
-
-# Draw the specific graph with labels
-plt.figure(figsize=(8, 6))
-nx.draw(graph, with_labels=True, node_color='lightblue', font_size=10)
-plt.show()
-
+GlycoDraw(structure_name)
 
