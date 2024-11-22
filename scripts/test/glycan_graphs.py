@@ -1,7 +1,12 @@
 import pickle
 from glycowork.motif.draw import GlycoDraw
 
-with open('/Users/xakdze/PycharmProjects/GlycoShape/data/glycan_graphs.pkl', 'rb') as file:
+"""
+Reads glycan graphs from a pickle file
+Does NOT visualizes a specific glycan structure!
+"""
+
+with open('data/glycan_graphs.pkl', 'rb') as file:
     data = pickle.load(file)  # Must be 'rb' mode
 
 # Access a specific graph by its key (structure name)

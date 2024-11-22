@@ -2,10 +2,10 @@ import pandas as pd
 import pickle
 
 # Load glycan binding data
-glycan_binding = pd.read_csv('/Users/xakdze/PycharmProjects/GlycoShape/data/glycan_binding.csv')
+glycan_binding = pd.read_csv('data/glycan_binding.csv')
 binding_10 = glycan_binding.head(10).dropna(axis=1)
 
-with open('/Users/xakdze/PycharmProjects/GlycoShape/data/glycan_graphs.pkl', 'rb') as file:
+with open('data/glycan_graphs.pkl', 'rb') as file:
     data = pickle.load(file)  # Must be 'rb' mode
 
 structure_name = 'GlcNAc(b1-6)GalNAc'
