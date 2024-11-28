@@ -4,8 +4,8 @@ import pickle
 
 
 lectin = "SNA"
-binding_motif = ["Neu5Ac", "Neu5Gc"]
-
+#binding_motif = ["Neu5Ac", "Neu5Gc"]
+binding_motif = ["Neu5Ac(a2-6)"]
 
 # Load glycan flexibility and SASA data from the pickle file
 flex_data_path = 'data/glycan_graphs.pkl'
