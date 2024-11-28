@@ -4,6 +4,11 @@ from glycowork.motif.analysis import get_heatmap
 
 from scripts.correlation.binding.binding_SNA import binding_df, binding_df_T
 
+"""
+This is not the correct way of filtering SNA
+use merged instead of string matching
+"""
+
 # Specify file paths for the binding and flexibility data
 binding_data_path = 'data/glycan_binding.csv'
 flex_data_path = 'data/glycan_graphs.pkl'
@@ -53,7 +58,7 @@ lectin ="SNA"
 
 # look for string lectin on the last column of the merged dataframe(lectin flex & binding data)
 lectin= merged_[merged_.iloc[:, -1].str.contains(lectin, na=False)]
-lectin_binding_glycans= lectin.dropna(axis=1) #drop the columns(glycans) that have NaN values
+lectin_binding_glycans= lectin.dropna(axis=1, how= "all") #drop the columns(glycans) that have NaN values
 
 # setindex to protein names and reasssign it to a vsriable
 #lectin = lectin_binding_glycans.set_index('protein')

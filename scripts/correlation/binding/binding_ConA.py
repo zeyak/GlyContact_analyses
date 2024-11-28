@@ -14,7 +14,9 @@ lectin ="ConA"
 
 # look for string lectin on the last column of the binding_df
 lectin= binding_df[binding_df.iloc[:, -1].str.contains(lectin, na=False)]
-lectin_binding_glycans= lectin.dropna(axis=1) #drop the columns(glycans) that have NaN values
+lectin_binding_glycans= lectin.dropna(axis=1, how="all")
+
+
 
 # setindex to protein names and reasssign it to a vsriable
 lectin = lectin_binding_glycans.drop(columns= 'target')
