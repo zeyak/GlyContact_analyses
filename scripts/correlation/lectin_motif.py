@@ -14,3 +14,5 @@ lectin_binding_motif = {
 for lectin, binding_motif in lectin_binding_motif.items():
     metric_df_instance = metric_df(lectin, binding_motif)
     plot_combined(metric_df_instance, lectin, binding_motif)
+
+##git
