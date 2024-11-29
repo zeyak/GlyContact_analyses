@@ -1,7 +1,5 @@
-from scripts.correlation.metric_df import metric_df
-from scripts.correlation.plot_corr_regg import plot_combined
-
-
+from scripts.correlation.func.metric_df import metric_df
+from scripts.correlation.func.plot_corr_regg import plot_combined
 
 
 lectin_binding_motif = {
@@ -12,8 +10,8 @@ lectin_binding_motif = {
      "PNA": ["Gal(b1-3)GalNAc"]
 }
 
-for lectin, binding_motif in lectin_binding_motif.items():  # Use .items() to unpack key-value pairs
-    metric_df_instance = metric_df(lectin, binding_motif)  # Assuming metric_df returns a DataFrame
+for lectin, binding_motif in lectin_binding_motif.items():
+    metric_df_instance = metric_df(lectin, binding_motif)
     plot_combined(metric_df_instance, lectin, binding_motif)
 
 
