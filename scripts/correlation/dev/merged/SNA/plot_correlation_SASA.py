@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scripts.correlation.merged.SNA.SNA_Neu5AcGc import final_df
+from scripts.correlation.dev.merged.SNA.SNA_Neu5AcGc import final_df
 
 output_file = 'scripts/correlation/merged/SNA/Binding_vs_SASA_SNA.png'
 

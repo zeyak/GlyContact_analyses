@@ -1,7 +1,6 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scripts.correlation.merged.AAL.AAL_Fuc import final_df
+from scripts.correlation.dev.merged.AAL.AAL_Fuc import final_df
 
 output_file = 'scripts/correlation/merged/AAL/Binding_vs_SASA_AAL.png'
 
