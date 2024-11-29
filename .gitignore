@@ -1,2 +1,6 @@
 /data/
 **/test/
+/.gitignore
+/scratch
+/out
+/.idea
