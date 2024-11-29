@@ -7,7 +7,7 @@ lectin_binding_motif = {
      "SNA": ["Neu5Ac(a2-6)", "Neu5Gc(a2-6)"],
      "MAL-II": ["Neu5Ac"],
      "ConA": ["Man(a1-2)"],
-     "PNA": ["Gal(b1-3)GalNAc"]
+     "PNA": ["Gal(b1-3)", "GalNAc"]
 }
 
 
