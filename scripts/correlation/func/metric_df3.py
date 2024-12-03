@@ -6,16 +6,8 @@ flex_data_path = 'data/glycan_graphs.pkl'
 binding_data_path = 'data/glycan_binding.csv'
 
 """
-updated version of metric_df:
+updates:
 
-take the mean of the binding scores in case of multiple rows for the same lectin:
-glycan_scores = lectin_df.mean(axis=0).to_dict()
-
-glycan_data=> metric_data
-glycan_row=> metric_row
-
-lectin binding motif logic updated:
-SNA, PNA
 
 """
 
@@ -111,4 +103,4 @@ def metric_df(lectin, binding_motif):
     # Convert the glycan data into a DataFrame
     metric_df = pd.DataFrame(metric_data)
 
-    return metric_df
+    return metric_df, binding_df_filtered, matching_monosaccharides, flexibility_values
