@@ -11,13 +11,7 @@ lectin_binding_motif = {
     "MAL-II": ["Neu5Ac(a2-3)"],
     # "PNA": ["Gal(b1-3)", "GalNAc"] #this returns empty
     # check how many neigh and if it has more than one.
-    "PNA": ["Gal", "GalNAc"],
-    "CMA": ["Fuc(a1-2)Gal", "GalNAc"],
-    "AOL": ["Fuc"],
-    # "CF": ["GalNAc(a1-?)", "GlcNAc(b1-?)"], #subgraph isomorphism
-    "HPA": ["GalNAc(a1-?)", "GlcNAc(b1-?)"],
-    "LAA": ["Fuc(a1-2)Gal(b1-4)GlcNAc"]
-
+    "PNA": ["Gal", "GalNAc"]
 }
 
 for lectin, binding_motif in lectin_binding_motif.items():
