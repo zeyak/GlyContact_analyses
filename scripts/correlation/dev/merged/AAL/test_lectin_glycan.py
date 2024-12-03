@@ -3,8 +3,8 @@ from glycowork.motif.graph import compare_glycans
 import pickle
 
 
-lectin = "PNA"
-binding_motif = ["Gal(b1-3)", "GalNAc"]
+lectin = "AOL"
+binding_motif = ["Fuc"]
 
 
 # Load glycan flexibility and SASA data from the pickle file

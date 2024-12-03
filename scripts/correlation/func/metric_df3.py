@@ -11,8 +11,6 @@ updates:
 
 """
 
-
-
 def metric_df(lectin, binding_motif):
     # Initialize a list to store glycan-specific rows in the metric_df
     metric_data = []
@@ -103,4 +101,10 @@ def metric_df(lectin, binding_motif):
     # Convert the glycan data into a DataFrame
     metric_df = pd.DataFrame(metric_data)
 
-    return metric_df, binding_df_filtered, matching_monosaccharides, flexibility_values
+    return metric_df,binding_df ,binding_df_filtered, matching_monosaccharides, flexibility_values
+
+
+lectin = "SNA"
+binding_motif = ["Neu5Ac(a2-6)", "Neu5Gc(a2-6)"]
+
+metric_df, binding_df, binding_df_filtered, matching_monosaccharides, flexibility_values = metric_df(lectin, binding_motif)

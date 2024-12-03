@@ -18,11 +18,12 @@ set2= {
     "PNA": ["Gal", "GalNAc"]}
 
 #Set3
-lectin_binding_motif = {"CMA": ["Fuc(a1-2)Gal", "GalNAc"],
-"AOL": ["Fuc"],
+lectin_binding_motif = {
+"CMA": ["Fuc(a1-2)Gal", "GalNAc"],
+#"AOL": ["Fuc"], # no matching lectin
 # "CF": ["GalNAc(a1-?)", "GlcNAc(b1-?)"], #subgraph isomorphism
 # "HPA": ["GalNAc(a1-?)", "GlcNAc(b1-?)"],
-"LAA": ["Fuc(a1-2)Gal(b1-4)GlcNAc"]
+#"LAA": ["Fuc(a1-2)Gal(b1-4)GlcNAc"]
                         }
 
 for lectin, binding_motif in lectin_binding_motif.items():
