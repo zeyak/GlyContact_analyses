@@ -1,15 +1,19 @@
 from scripts.correlation.func.metric_df2 import metric_df
 from scripts.correlation.func.plot_corr_regg import plot_combined
 
-# Set2
+set1 = {
+    "AAL": ["Fuc"],
+    "SNA": ["Neu5Ac(a2-6)", "Neu5Gc(a2-6)"],
+     "ConA": ["Man(a1-2)"],
+     "MAL-II": ["Neu5Ac"],
+     "PNA": ["Gal(b1-3)", "GalNAc"] #this returns empty
+}
+
 set2= {
     "AAL": ["Fuc"],
     "SNA": ["Neu5Ac(a2-6)", "Neu5Gc(a2-6)"],
-    # "ConA": ["Man(a1-2)"],
     "ConA": ["Man"],
-    # "MAL-II": ["Neu5Ac"],
     "MAL-II": ["Neu5Ac(a2-3)"],
-    # "PNA": ["Gal(b1-3)", "GalNAc"] #this returns empty
     # check how many neigh and if it has more than one.
     "PNA": ["Gal", "GalNAc"]}
 
