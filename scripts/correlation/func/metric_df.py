@@ -56,7 +56,12 @@ def metric_df (lectin, binding_motif):
                 relevant_nodes.append(attributes)
                 weighted_flex_scores.append(attributes.get("weighted_mean_flexibility", 0))
 
+        """
+        TODO:
 
+                # play aroudn mean, sum or max
+                # see which of them best fit to the oberseved binding. Explore.
+        """
         # Compute the average SASA metrics for filtered nodes
         def compute_average_metrics(nodes):
             if not nodes:

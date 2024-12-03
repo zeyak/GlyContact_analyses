@@ -3,8 +3,8 @@ from glycowork.motif.graph import compare_glycans
 import pickle
 
 
-lectin = "AAL"
-binding_motif = ["Fuc"]
+lectin = "PNA"
+binding_motif = ["Gal(b1-3)", "GalNAc"]
 
 
 # Load glycan flexibility and SASA data from the pickle file
@@ -67,6 +67,8 @@ for glycan, binding_score in glycan_scores.items():
         if any(motif in attributes.get("Monosaccharide", "") for motif in binding_motif): #plot behavior changes if this is ignored
             relevant_nodes.append(attributes)
             weighted_flex_scores.append(attributes.get("weighted_mean_flexibility", 0))
+            # Print relevant node information
+            print(f"Node ID: {node}, Attributes: {attributes}")
 
 
     # Compute the average SASA metrics for filtered nodes
@@ -77,6 +79,14 @@ for glycan, binding_score in glycan_scores.items():
         total_median = sum(node["Median Score"] for node in nodes) / len(nodes)
         total_weighted = sum(node["Weighted Score"] for node in nodes) / len(nodes)
         return {"mean": total_mean, "median": total_median, "weighted_score": total_weighted}
+
+        """    def compute sum():
+        return sum(weighted_flex_scores) / len(weighted_flex_scores) if weighted_flex_scores else None
+
+    def compute max():
+        return max(weighted_flex_scores) if weighted_flex_scores else None
+        """
+
 
     average_metrics = compute_average_metrics(relevant_nodes)
 

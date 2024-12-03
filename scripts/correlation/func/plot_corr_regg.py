@@ -28,7 +28,8 @@ def plot_corr_binding_flexibility(metric_df, lectin, binding_motif):
         y='binding_score',
         data=metric_df,
         scatter_kws={'alpha': 0.7},
-        line_kws={'color': 'red'}
+        line_kws={'color': 'red'},
+
     )
 
     # Set plot labels and title
@@ -82,6 +83,8 @@ def plot_combined(metric_df, lectin, binding_motif):
     corr_binding_sasa_weighted = metric_df['binding_score'].corr(metric_df['SASA_weighted'])
 
     # Print correlation coefficients
+    print("lectin: ", lectin)
+    print("binding_motif: ", binding_motif)
     print(f"Correlation between Binding and Flexibility: {corr_binding_flexibility}")
     print(f"Correlation between Binding and SASA Weighted: {corr_binding_sasa_weighted}")
 
@@ -114,7 +117,7 @@ def plot_combined(metric_df, lectin, binding_motif):
     axes[1].set_xlabel('SASA Weighted')
 
     # Save the combined plot
-    plt.savefig(f'scripts/correlation/plots/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
+    plt.savefig(f'scripts/correlation/plots/set2/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
 
     # Show the plots
     plt.show()
