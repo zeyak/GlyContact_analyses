@@ -12,37 +12,14 @@ plt.figure(figsize=(8, 6))
 """
 Binding vs Flexibility
 """
-def plot_corr_binding_flexibility(metric_df, lectin, binding_motif):
-    # Calculate correlation coefficients
-    corr_binding_flexibility = metric_df['binding_score'].corr(metric_df['weighted_mean_flexibility'])
 
-    # Print correlation coefficients
-    print(f"Correlation between Binding and Flexibility: {corr_binding_flexibility}")
 
-    # Create the scatter plot with regression line
-    sns.regplot(
-        x='weighted_mean_flexibility',
-        y='binding_score',
-        data=metric_df,
-        scatter_kws={'alpha': 0.7},
-        line_kws={'color': 'red'},
 
-    )
-
-    # Set plot labels and title
-    plt.title(f'Binding vs Flexibility Weighted {lectin} {binding_motif}', fontsize=12)
-    plt.xlabel('Flexibility')
-    plt.ylabel('Binding Score')
-    plt.tight_layout()
-
-    # Save and show the plot
-    plt.savefig(f'scripts/correlation/plots/Binding_vs_Flexibility_{lectin}.png', dpi=300)
-    plt.show()
 
 """
 Binding vs SASA
 """
-def plot_corr_binding_SASA(metric_df, lectin, binding_motif):
+def plot_corr_binding_SASA_(metric_df, lectin, binding_motif):
     # Calculate the correlation coefficient for SASA weighted score
     corr_binding_sasa_weighted = metric_df['binding_score'].corr(metric_df['SASA_weighted'])
 
@@ -70,6 +47,86 @@ def plot_corr_binding_SASA(metric_df, lectin, binding_motif):
     # Show the plot
     plt.show()
 
+def plot_corr_binding_SASA(metric_df, lectin, binding_motif):
+    """Plot correlation of binding scores with SASA-related metrics."""
+
+    for metric_key in metric_df.columns:
+        if metric_key.startswith("SASA"):
+            # Calculate the correlation coefficient
+            corr_value = metric_df['binding_score'].corr(metric_df[metric_key])
+
+            # Print the correlation coefficient
+            print(f"Correlation between Binding and {metric_key}: {corr_value}")
+
+            # Create the plot
+            plt.figure(figsize=(8, 6))
+            sns.regplot(
+                x=metric_key,
+                y='binding_score',
+                data=metric_df,
+                scatter_kws={'alpha': 0.7},
+                line_kws={'color': 'red'}
+            )
+
+            # Set plot title and axis labels
+            plt.title(f'Binding vs {metric_key} ({lectin} - {binding_motif})', fontsize=12)
+            plt.xlabel(metric_key, fontsize=10)
+            plt.ylabel('Binding Score', fontsize=10)
+
+            # Save the plot
+            plt.savefig(f'scripts/correlation/plots/Binding_vs_{metric_key}_{lectin}.png', dpi=300)
+
+            # Show the plot
+            plt.show()
+
+def plot_corr_binding_SASA_subplots(metric_df, lectin, binding_motif):
+    """Plot correlation of binding scores with SASA-related metrics in subplots."""
+
+    # Filter for metrics that start with "SASA"
+    sasa_metrics = [metric for metric in metric_df.columns if metric.startswith("SASA")]
+
+    # Create a figure with 3 rows and 3 columns of subplots
+    fig, axes = plt.subplots(3, 3, figsize=(15, 15))
+    axes = axes.flatten()  # Flatten the 2D array of axes for easier iteration
+
+    # Iterate through SASA metrics and corresponding axes
+    for i, metric_key in enumerate(sasa_metrics):
+        if i < len(axes):  # Ensure we don't exceed the number of available subplots
+            ax = axes[i]
+
+            # Calculate correlation coefficient
+            corr_value = metric_df['binding_score'].corr(metric_df[metric_key])
+            print(f"Correlation between Binding and {metric_key}: {corr_value}")
+
+            # Create the scatter plot with regression line
+            sns.regplot(
+                x=metric_key,
+                y='binding_score',
+                data=metric_df,
+                ax=ax,
+                scatter_kws={'alpha': 0.7},
+                line_kws={'color': 'red'}
+            )
+
+            # Set subplot title and labels
+            ax.set_title(f'{metric_key} (Corr: {corr_value:.2f})', fontsize=10)
+            ax.set_xlabel(metric_key, fontsize=8)
+            ax.set_ylabel('Binding Score', fontsize=8)
+        else:
+            break
+
+    # Remove empty subplots if there are fewer metrics than subplots
+    for j in range(len(sasa_metrics), len(axes)):
+        fig.delaxes(axes[j])
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+    # Save the plot
+    plt.savefig(f'scripts/correlation/plots/set3/SASA/Binding_vs_SASA_Metrics_{lectin}.png', dpi=300)
+
+    # Show the plot
+    plt.show()
 
 """
 Both plots combined

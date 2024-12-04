@@ -1,5 +1,6 @@
 from scripts.correlation.func.metric_df3 import metric_df
-from scripts.correlation.func.plot_corr_regg import plot_combined
+from scripts.correlation.func.plot_corr_regg import plot_combined, plot_corr_binding_SASA_subplots
+from scripts.correlation.func.plot_corr_regg import plot_corr_binding_SASA_subplots
 
 set1 = {
     "AAL": ["Fuc"],
@@ -32,4 +33,5 @@ lectin_binding_motif = {
 
 for lectin, binding_motif in lectin_binding_motif.items():
     metric_df_instance = metric_df(lectin, binding_motif)
-    plot_combined(metric_df_instance, lectin, binding_motif)
+    #plot_combined(metric_df_instance, lectin, binding_motif)
+    plot_corr_binding_SASA_subplots(metric_df_instance, lectin, binding_motif)

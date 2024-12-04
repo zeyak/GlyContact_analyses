@@ -37,15 +37,44 @@ def find_matching_glycan(flex_data, glycan):
 
 
 def compute_sasa_metrics(nodes):
-    """Compute average SASA metrics (mean, median, and weighted score)."""
+    """Compute sum, mean, and max SASA metrics (Mean Score, Median Score, and Weighted Score)."""
     if not nodes:
-        return {"SASA_mean": None, "SASA_median": None, "SASA_weighted": None}
+        return {
+            "SASA_mean": None,
+            "SASA_median": None,
+            "SASA_weighted": None,
+            "SASA_mean_max": None,
+            "SASA_median_max": None,
+            "SASA_weighted_max": None,
+            "SASA_mean_sum": None,
+            "SASA_median_sum": None,
+            "SASA_weighted_sum": None,
+        }
 
-    SASA_mean = sum(node.get("Mean Score", 0) for node in nodes) / len(nodes)
-    SASA_median = sum(node.get("Median Score", 0) for node in nodes) / len(nodes)
-    SASA_weighted = sum(node.get("Weighted Score", 0) for node in nodes) / len(nodes)
+    SASA_mean_sum = sum(node.get("Mean Score", 0) for node in nodes)
+    SASA_median_sum = sum(node.get("Median Score", 0) for node in nodes)
+    SASA_weighted_sum = sum(node.get("Weighted Score", 0) for node in nodes)
 
-    return {"SASA_mean": SASA_mean, "SASA_median": SASA_median, "SASA_weighted": SASA_weighted}
+    SASA_mean = SASA_mean_sum / len(nodes)
+    SASA_median = SASA_median_sum / len(nodes)
+    SASA_weighted = SASA_weighted_sum / len(nodes)
+
+    SASA_mean_max = max(node.get("Mean Score", 0) for node in nodes)
+    SASA_median_max = max(node.get("Median Score", 0) for node in nodes)
+    SASA_weighted_max = max(node.get("Weighted Score", 0) for node in nodes)
+
+    return {
+        "SASA_mean": SASA_mean,
+        "SASA_median": SASA_median,
+        "SASA_weighted": SASA_weighted,
+        "SASA_mean_max": SASA_mean_max,
+        "SASA_median_max": SASA_median_max,
+        "SASA_weighted_max": SASA_weighted_max,
+        "SASA_mean_sum": SASA_mean_sum,
+        "SASA_median_sum": SASA_median_sum,
+        "SASA_weighted_sum": SASA_weighted_sum,
+    }
+
 
 def process_glycan(matched_flex_glycan, binding_motifs, graph):
     """
@@ -127,7 +156,13 @@ def metric_df(lectin, binding_motif):
             "SASA_mean": sasa_metrics["SASA_mean"],
             "SASA_median": sasa_metrics["SASA_median"],
             "SASA_weighted": sasa_metrics["SASA_weighted"],
-            "weighted_mean_flexibility": overall_flexibility,
+            "SASA_mean_max": sasa_metrics.get("SASA_mean_max", None),  # Add max metrics
+            "SASA_median_max": sasa_metrics.get("SASA_median_max", None),
+            "SASA_weighted_max": sasa_metrics.get("SASA_weighted_max", None),
+            "SASA_mean_sum": sasa_metrics.get("SASA_mean_sum", None),  # Add sum metrics
+            "SASA_median_sum": sasa_metrics.get("SASA_median_sum", None),
+            "SASA_weighted_sum": sasa_metrics.get("SASA_weighted_sum", None),
+            "weighted_mean_flexibility": overall_flexibility,  # Keep existing flexibility value
         })
 
     metric_df = pd.DataFrame(metric_data)
