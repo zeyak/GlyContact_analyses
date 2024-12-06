@@ -5,7 +5,7 @@ from glycowork.motif.processing import get_class
 from glycowork.motif.graph import *
 
 flex_data_path = 'data/glycan_graphs.pkl'
-binding_data_path = 'data/glycan_binding.csv'
+binding_data_path = 'data/20241206_glycan_binding.csv'
 
 
 def load_data():

@@ -19,15 +19,16 @@ set2= {
 
 #Set3
 lectin_binding_motif = {
-    #"AAL": ["Fuc"],
-    #"SNA": ["Sia(a2-6)"],
-    #"ConA": ["Man"],
-    #"MAL-II": ["Neu5Ac(a2-3)"],
-    #"PNA": ["Gal(b1-3)GalNAc"],
+    "AAL": ["Fuc"],
+    "SNA": ["Sia(a2-6)"],
+    "ConA": ["Man"],
+    "MAL-II": ["Neu5Ac(a2-3)"],
+    "PNA": ["Gal(b1-3)GalNAc"],
     "CMA": ["Fuc(a1-2)Gal", "GalNAc"], # specifiy th terminal node within is teh first monosac if there is more then one
-# "CF": ["GalNAc(a1-?)", "GlcNAc(b1-?)"], No lectin found
-    #"HPA": ["GalNAc(a1-?)", "GlcNAc(b1-?)"],
-#"LAA": ["Fuc(a1-2)Gal(b1-4)GlcNAc"], No lectin found
+ #"CF": ["GalNAc(a1-?)", "GlcNAc(b1-?)"], # No lectin found
+    "AOL": ["Fuc"],
+    "HPA": ["GalNAc(a1-?)", "GlcNAc(b1-?)"],
+#"LAA": ["Fuc(a1-2)Gal(b1-4)GlcNAc"]#, No lectin found
                         }
 
 for lectin, binding_motif in lectin_binding_motif.items():
