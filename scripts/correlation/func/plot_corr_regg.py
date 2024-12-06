@@ -81,9 +81,7 @@ def plot_corr_binding_SASA(metric_df, lectin, binding_motif):
 
 def plot_corr_binding_SASA_subplots(metric_df, lectin, binding_motif):
     """Plot correlation of binding scores with SASA-related metrics in subplots."""
-
-    # Filter for metrics that start with "SASA"
-    sasa_metrics = [metric for metric in metric_df.columns if metric.startswith("SASA")]
+    sasa_metrics = [metric for metric in metric_df.columns if metric.startswith("SASA_weighted")]
 
     # Create a figure with 3 rows and 3 columns of subplots
     fig, axes = plt.subplots(3, 3, figsize=(15, 15))
@@ -105,7 +103,7 @@ def plot_corr_binding_SASA_subplots(metric_df, lectin, binding_motif):
                 data=metric_df,
                 ax=ax,
                 scatter_kws={'alpha': 0.7},
-                line_kws={'color': 'red'}
+                line_kws={'color': 'red'},
             )
 
             # Set subplot title and labels
@@ -152,7 +150,7 @@ def plot_combined(metric_df, lectin, binding_motif):
         y='binding_score',
         data=metric_df,
         scatter_kws={'alpha': 0.7},
-        line_kws={'color': 'red'}
+        line_kws={'color': 'red'},
     )
     axes[0].set_title(f'Binding vs Flexibility Weighted\n{lectin} {binding_motif}', fontsize=12)
     axes[0].set_xlabel('Flexibility')
@@ -175,5 +173,67 @@ def plot_combined(metric_df, lectin, binding_motif):
 
     # Show the plots
     plt.show()
+
+def plot_combined_colors(metric_df, lectin, binding_motif):
+    """Plots Binding vs Flexibility and Binding vs SASA Weighted with colors for glycans."""
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))  # Create two subplots side by side
+
+    # Plot Binding vs Flexibility without legend
+    sns.scatterplot(
+        ax=axes[0],
+        x='weighted_mean_flexibility',
+        y='binding_score',
+        data=metric_df,
+        hue="class",  # Color by glycan class
+        palette="tab10",  # Use glycan column for coloring
+        alpha=0.7
+    )
+    sns.regplot(
+        ax=axes[0],
+        x='weighted_mean_flexibility',
+        y='binding_score',
+        data=metric_df,
+        scatter=False,  # Do not plot points again
+        line_kws={'color': 'red'}
+    )
+    axes[0].set_title(f'Binding vs Flexibility Weighted\n{lectin} {binding_motif}', fontsize=12)
+    axes[0].set_xlabel('Flexibility')
+    axes[0].set_ylabel('Binding Score')
+    axes[0].get_legend().remove()  # Remove legend from the first plot
+
+    # Plot Binding vs SASA Weighted with the legend
+    sns.scatterplot(
+        ax=axes[1],
+        x='SASA_weighted',
+        y='binding_score',
+        data=metric_df,
+        hue='class',  # Use glycan column for coloring
+        palette="tab10",
+        alpha=0.7
+    )
+    sns.regplot(
+        ax=axes[1],
+        x='SASA_weighted',
+        y='binding_score',
+        data=metric_df,
+        scatter=False,  # Do not plot points again
+        line_kws={'color': 'red'}
+    )
+    axes[1].set_title(f'Binding vs SASA Weighted\n{lectin} {binding_motif}', fontsize=12)
+    axes[1].set_xlabel('SASA Weighted')
+    axes[1].set_ylabel('Binding Score')
+    axes[1].legend(title="Glycan class", bbox_to_anchor=(1.05, 1), loc='upper left')  # Keep class legend
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+    # Save the combined plot
+    plt.savefig(f'scripts/correlation/plots/set3/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
+
+    # Show the plots
+    plt.show()
+
+
 
 

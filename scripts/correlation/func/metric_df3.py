@@ -1,6 +1,8 @@
 import pickle
 import pandas as pd
 from glycowork.motif.graph import compare_glycans, subgraph_isomorphism
+from glycowork.motif.processing import get_class
+from glycowork.motif.graph import *
 
 flex_data_path = 'data/glycan_graphs.pkl'
 binding_data_path = 'data/glycan_binding.csv'
@@ -88,15 +90,39 @@ def process_glycan(matched_flex_glycan, binding_motifs, graph):
     Returns:
         Tuple of node attributes (matching monosaccharides), flexibility values, and found motifs.
     """
-    # Initialize lists for filtered metrics and found motifs
+
+    def extract_terminal_residue(binding_motif):
+        """
+        Extract the terminal residue from a binding motif.
+
+        Args:
+            binding_motif: A string representing a glycan binding motif (e.g., "Fuc(a1-2)Gal").
+
+        Returns:
+            A string representing the terminal residue (e.g., "Fuc(a1-2)").
+        """
+        # Find the first `(` and include everything up to the matching `)`
+        if '(' in binding_motif and ')' in binding_motif:
+            end_idx = binding_motif.find(')') + 1
+            return binding_motif[:end_idx]  # Extract up to the first `)`
+        else:
+            return binding_motif  # Return as is if no linkage format exists
+
+    # Preprocess the binding motifs list to extract terminal residues
+    terminal_binding_motifs = [extract_terminal_residue(motif) for motif in binding_motifs]
+
     matching_monosaccharides = []  # Nodes matching the binding motifs
     flexibility_values = []  # Weighted flexibility values for matching nodes
     found_motifs = []  # List of motifs found in the glycan
 
-    # Iterate over each binding motif
-    for binding_motif in binding_motifs:
-        # Use subgraph isomorphism to identify matching nodes for the current motif
-        is_present, matched_nodes = subgraph_isomorphism(matched_flex_glycan, binding_motif, return_matches=True)
+    # Iterate over the terminal binding motifs
+    for binding_motif in terminal_binding_motifs:
+        is_present, matched_nodes = subgraph_isomorphism(
+            matched_flex_glycan,
+            binding_motif,
+            return_matches=True,
+            termini_list=['terminal']  # Restrict to terminal matches
+        )
 
         if not is_present:
             # If the current motif is not present, skip to the next
@@ -106,17 +132,26 @@ def process_glycan(matched_flex_glycan, binding_motifs, graph):
         found_motifs.append(binding_motif)
 
         # Flatten matched nodes (in case of nested lists)
-        if isinstance(matched_nodes[0], list):
-            matched_nodes = [node for sublist in matched_nodes for node in sublist]
+        if matched_nodes:  # Check if there are matches
+            if isinstance(matched_nodes[0], list):
+                matched_nodes = [node for sublist in matched_nodes for node in sublist]
 
         # Process nodes in the graph to extract attributes for matched nodes
         for node in matched_nodes:
             if node in graph.nodes:
                 attributes = graph.nodes[node]
+                #matching_monosaccharides.append(attributes.get("Monosaccharide", 0))
                 matching_monosaccharides.append(attributes)
                 flexibility_values.append(attributes.get("weighted_mean_flexibility", 0))
 
+                # Debugging: print node data and motif match
+                print(f"Node {node} attributes: {attributes}")
+                if "name" in attributes:
+                    print(f"Matched motif: {binding_motif} in graph node {node} with name {attributes['name']}")
+                    print(f"Matched motif: {binding_motif} in graph node {node} with Monosaccharide {attributes['Monosaccharide']}")
+
     return matching_monosaccharides, flexibility_values, found_motifs
+
 
 
 def metric_df(lectin, binding_motif):
@@ -146,35 +181,112 @@ def metric_df(lectin, binding_motif):
 
         # Compute SASA metrics and overall flexibility
         sasa_metrics = compute_sasa_metrics(matching_monosaccharides)
-        overall_flexibility = (
-            sum(flexibility_values) / len(flexibility_values) if flexibility_values else None
-        )
+        overall_flexibility = (sum(flexibility_values) / len(flexibility_values) if flexibility_values else None)
+
+        # Get the glycan's class
+        glycan_class = get_class(matched_flex_glycan)
 
         metric_data.append({
             "glycan": glycan,
             "binding_score": binding_score,
-            "SASA_mean": sasa_metrics["SASA_mean"],
-            "SASA_median": sasa_metrics["SASA_median"],
+            #"SASA_mean": sasa_metrics["SASA_mean"],
+            #"SASA_median": sasa_metrics["SASA_median"],
             "SASA_weighted": sasa_metrics["SASA_weighted"],
-            "SASA_mean_max": sasa_metrics.get("SASA_mean_max", None),  # Add max metrics
-            "SASA_median_max": sasa_metrics.get("SASA_median_max", None),
+            #"SASA_mean_max": sasa_metrics.get("SASA_mean_max", None),
+            #"SASA_median_max": sasa_metrics.get("SASA_median_max", None),
             "SASA_weighted_max": sasa_metrics.get("SASA_weighted_max", None),
-            "SASA_mean_sum": sasa_metrics.get("SASA_mean_sum", None),  # Add sum metrics
-            "SASA_median_sum": sasa_metrics.get("SASA_median_sum", None),
+            #"SASA_mean_sum": sasa_metrics.get("SASA_mean_sum", None),
+            #"SASA_median_sum": sasa_metrics.get("SASA_median_sum", None),
             "SASA_weighted_sum": sasa_metrics.get("SASA_weighted_sum", None),
-            "weighted_mean_flexibility": overall_flexibility,  # Keep existing flexibility value
+            "weighted_mean_flexibility": overall_flexibility,
+            "class": glycan_class,  # Add class column
         })
 
     metric_df = pd.DataFrame(metric_data)
-    return metric_df #binding_df, filtered_df
+    return metric_df #, binding_df, filtered_df, flex_data
 
 
-# Example usage
-#lectin = "PNA"
-#binding_motif = "Gal(b1-3)GalNAc"
+def subgraph_isomorphism_II(glycan, motif, termini_list = [], count = False, return_matches = False):
+  if isinstance(glycan, str):
+    glycan = glycan_to_nxGraph(glycan, termini='calc' if termini_list else None)
+  else:
+    g1 = deepcopy(glycan)
+  if isinstance(motif, str):
+    motif = glycan_to_nxGraph(motif, termini='provided' if termini_list else None, termini_list=termini_list)
+  else:
+    g2 = deepcopy(motif)
+  if isinstance(glycan, str) and isinstance(motif, str):
+    if motif.count('(') > glycan.count('('):
+      return (0, []) if return_matches else 0 if count else False
+    if not count and not return_matches and motif in glycan:
+      return True
+    motif_comp = min_process_glycans([motif, glycan])
+    if 'O' in glycan + motif:
+      glycan, motif = [re.sub(r"(?<=[a-zA-Z])\d+(?=[a-zA-Z])", 'O', g).replace('NeuOAc', 'Neu5Ac').replace('NeuOGc', 'Neu5Gc') for g in [glycan, motif]]
+  else:
+    print(motif.__dict__,glycan.__dict__)
+    # if len(glycan.nodes) < len(motif.nodes):
+    #   return (0, []) if return_matches else 0 if count else False
+    motif_comp = [nx.get_node_attributes(motif, "string_labels").values(), nx.get_node_attributes(glycan, "string_labels").values()]
+    if 'O' in ''.join(unwrap(motif_comp)):
+      g1, g2 = ptm_wildcard_for_graph(deepcopy(glycan)), ptm_wildcard_for_graph(deepcopy(motif))
+    else:
+      g1, g2 = deepcopy(glycan), motif
+  narrow_wildcard_list = {k: get_possible_linkages(k) if '?' in k else get_possible_monosaccharides(k) for k in set(unwrap(motif_comp))
+                          if '?' in k or k in {'Hex', 'HexOS', 'HexNAc', 'HexNAcOS', 'dHex', 'Sia', 'HexA', 'Pen', 'Monosaccharide'} or '!' in k}
+  if termini_list or narrow_wildcard_list:
+    graph_pair = nx.algorithms.isomorphism.GraphMatcher(g1, g2, node_match = categorical_node_match_wildcard('string_labels', 'unknown', narrow_wildcard_list,
+                                                                                                             'termini', 'flexible'))
+  else:
+    g1_node_attr = set(nx.get_node_attributes(g1, "string_labels").values())
+    if all(k in g1_node_attr for k in motif_comp[0]):
+      graph_pair = nx.algorithms.isomorphism.GraphMatcher(g1, g2, node_match = nx.algorithms.isomorphism.categorical_node_match('string_labels', 'unknown'))
+    else:
+      return (0, []) if return_matches else 0 if count else False
+
+  if return_matches:
+    mappings = [list(isos.keys()) for isos in graph_pair.subgraph_isomorphisms_iter()]
+
+  # Count motif occurrence
+  if count:
+    counts = 0
+    while graph_pair.subgraph_is_isomorphic():
+      mapping = graph_pair.mapping
+      inverse_mapping  = {v: k for k, v in mapping.items()}
+      if all(inverse_mapping[node] < inverse_mapping[neighbor] for node, neighbor in g2.edges()):
+        counts += 1
+      g1.remove_nodes_from(mapping.keys())
+      if termini_list or narrow_wildcard_list:
+        graph_pair = nx.algorithms.isomorphism.GraphMatcher(g1, g2, node_match = categorical_node_match_wildcard('string_labels', 'unknown', narrow_wildcard_list,
+                                                                                                             'termini', 'flexible'))
+      else:
+        g1_node_attr = set(nx.get_node_attributes(g1, "string_labels").values())
+        if all(k in g1_node_attr for k in motif_comp[0]):
+          graph_pair = nx.algorithms.isomorphism.GraphMatcher(g1, g2, node_match = nx.algorithms.isomorphism.categorical_node_match('string_labels', 'unknown'))
+        else:
+          return counts if not return_matches else (counts, mappings)
+    return counts if not return_matches else (counts, mappings)
+  else:
+    if graph_pair.subgraph_is_isomorphic():
+      for mapping in graph_pair.subgraph_isomorphisms_iter():
+        mapping = {v: k for k, v in mapping.items()}
+        for node, neighbor in g2.edges():
+          if mapping[node] >= mapping[neighbor]:
+             return False if not return_matches else (0, [])
+        return True if not return_matches else (1, mappings)
+  return False if not return_matches else (0, [])
 
 
-#lectin = "CMA"
-#binding_motif = ["Fuc(a1-2)Gal", "GalNAc"]
 
-#metric_df, binding_df, filtered_df = metric_df(lectin, binding_motif)
+"""# Example usage
+lectin = "CMA"
+binding_motif = ["Fuc(a1-2)Gal", "GalNAc"]
+
+metric_df, binding_df, filtered_df, flex_data = metric_df(lectin, binding_motif)
+
+subgraph_isomorphism_II(
+            flex_data['Fuc(a1-2)Gal'],
+            'Fuc(a1-2)',
+            return_matches=True,
+            termini_list=['terminal'])
+"""
