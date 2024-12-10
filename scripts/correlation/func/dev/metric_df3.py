@@ -3,6 +3,10 @@ import pandas as pd
 from glycowork.motif.graph import compare_glycans, subgraph_isomorphism
 from glycowork.motif.processing import get_class
 from glycowork.motif.graph import *
+from glycowork.motif.draw import GlycoDraw
+
+GlycoDraw("Neu5Ac(a2-3)Gal(b1-4)[Fuc(a1-3)]GlcNAc(b1-2)Man(a1-3)[Neu5Gc(a2-6)Gal(b1-4)GlcNAc(b1-2)Man(a1-6)][GlcNAc(b1-4)]Man(b1-4)GlcNAc(b1-4)[Fuc(a1-6)]GlcNAc", highlight_motif = "Neu5Ac(a2-3)Gal(b1-4)[Fuc(a1-3)]GlcNAc")
+
 
 flex_data_path = 'data/glycan_graphs.pkl'
 binding_data_path = 'data/20241206_glycan_binding.csv'
@@ -121,7 +125,7 @@ def process_glycan(matched_flex_glycan, binding_motifs, graph):
             matched_flex_glycan,
             binding_motif,
             return_matches=True,
-            termini_list=['terminal']  # Restrict to terminal matches
+            termini_list=['terminal', 'flexible']  # Restrict to terminal matches
         )
 
         if not is_present:
@@ -203,7 +207,7 @@ def metric_df(lectin, binding_motif):
         })
 
     metric_df = pd.DataFrame(metric_data)
-    return metric_df #, binding_df, filtered_df, flex_data
+    return metric_df , binding_df, filtered_df, flex_data
 
 
 def subgraph_isomorphism_II(glycan, motif, termini_list = [], count = False, return_matches = False):
@@ -277,8 +281,7 @@ def subgraph_isomorphism_II(glycan, motif, termini_list = [], count = False, ret
   return False if not return_matches else (0, [])
 
 
-
-"""# Example usage
+# Example usage
 lectin = "CMA"
 binding_motif = ["Fuc(a1-2)Gal", "GalNAc"]
 
@@ -289,4 +292,3 @@ subgraph_isomorphism_II(
             'Fuc(a1-2)',
             return_matches=True,
             termini_list=['terminal'])
-"""

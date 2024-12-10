@@ -121,7 +121,7 @@ def plot_corr_binding_SASA_subplots(metric_df, lectin, binding_motif):
     plt.tight_layout()
 
     # Save the plot
-    plt.savefig(f'scripts/correlation/plots/set3/SASA/Binding_vs_SASA_Metrics_{lectin}.png', dpi=300)
+    plt.savefig(f'scripts/correlation/plots/set4/SASA/Binding_vs_SASA_Metrics_{lectin}.png', dpi=300)
 
     # Show the plot
     plt.show()
@@ -169,7 +169,7 @@ def plot_combined(metric_df, lectin, binding_motif):
     axes[1].set_xlabel('SASA Weighted')
 
     # Save the combined plot
-    plt.savefig(f'scripts/correlation/plots/set3/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
+    plt.savefig(f'scripts/correlation/plots/set4/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
 
     # Show the plots
     plt.show()
@@ -229,7 +229,7 @@ def plot_combined_colors(metric_df, lectin, binding_motif):
     plt.tight_layout()
 
     # Save the combined plot
-    plt.savefig(f'scripts/correlation/plots/set3/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
+    plt.savefig(f'scripts/correlation/plots/set4/Binding_vs_Flexibility_and_SASA_{lectin}.png', dpi=300)
 
     # Show the plots
     plt.show()
