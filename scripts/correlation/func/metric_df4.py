@@ -94,34 +94,34 @@ def process_glycan(matched_glycan, properties, flex_data):
 
                 # Retrieve graph for the matched glycan
                 graph = flex_data.get(matched_glycan)
-                print(f"Graph for matched glycan {matched_glycan}: {graph.__dict__ if graph else 'Graph not found'}")
+
+                #print(f"Graph for matched glycan {matched_glycan}: {graph.__dict__ if graph else 'Graph not found'}")
 
                 if graph:
-                    graph_nodes = list(graph.nodes)  # Retrieve graph nodes
+                    graph_nodes = list(graph.nodes)  # Ensure consistent graph node order
                     print(f"Graph nodes: {graph_nodes}")
 
-                    # Map matched nodes to graph nodes using index // 2 logic
-                    aligned_nodes = [graph_nodes[index // 2] for index in matched_nodes if
-                                     (index // 2) < len(graph_nodes)]
+                    # Align matched nodes to graph nodes
+                    aligned_nodes = [
+                        graph_nodes[index] for index in matched_nodes if index < len(graph_nodes)
+                    ]
                     print(f"Aligned nodes: {aligned_nodes}")
 
-                    # Process every second aligned node in reverse order
-                    for graph_node in reversed(aligned_nodes[::2]):  # Reverse and take every second node
-                        print(f"Processing graph node: {graph_node}")
-
-                        if graph_node in graph.nodes:  # Ensure the node exists in the graph
+                    # Process the aligned nodes
+                    for graph_node in aligned_nodes:
+                        if graph_node in graph.nodes:
                             attributes = graph.nodes[graph_node]  # Access node attributes
                             print(f"Attributes for graph node {graph_node}: {attributes}")
-                            print(f" ")
 
+                            # Append relevant attributes to lists
                             matching_monosaccharides.append(attributes.get("Monosaccharide", 0))
                             flexibility_weighted.append(attributes.get("weighted_mean_flexibility", 0))
                             sasa_weighted.append(attributes.get("Weighted Score", 0))
                         else:
-                            print(f"Graph node {graph_node} not found for glycan {matched_glycan}")
+                            print(f"Graph node {graph_node} not found in graph for glycan {matched_glycan}")
 
         except Exception as e:
-            print(f"Error processing motif {motif}: {str(e)}")
+            print(f"Error processing motif {motif} for glycan {matched_glycan}: {str(e)}")
 
     return matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs
 
@@ -184,6 +184,7 @@ def metric_df(lectin, properties):
 
         # Find matching glycan
         matched_glycan = find_matching_glycan(flex_data, glycan)
+
         if not matched_glycan:
             #print(f"No matching glycan found for {glycan}, skipping.")
             continue
@@ -201,11 +202,15 @@ def metric_df(lectin, properties):
                 glycan_class = get_class(matched_glycan)
 
                 # Debugging logs
+                print(" ")
+                print("lectin: ", lectin)
                 print(f"Processing glycan: {glycan}")
-                print(f"Matching monosaccharides: {matching_monosaccharides}")
                 print(f"Found motifs: {found_motifs}")
+                print(" ")
+                print(f"Matching monosaccharides: {matching_monosaccharides}")
                 print(f"SASA weighted: {sasa_weighted}")
                 print(f"Flexibility weighted: {flexibility_weighted}")
+                print(" ")
 
                 # Append computed metrics
                 metric_data.append({

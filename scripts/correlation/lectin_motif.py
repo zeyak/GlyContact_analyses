@@ -1,5 +1,5 @@
 from scripts.correlation.func.metric_df4 import metric_df
-from scripts.correlation.func.plot_corr_regg import plot_combined, plot_corr_binding_SASA_subplots, plot_combined_colors
+from scripts.correlation.func.plot_corr_regg import plot_combined_colors
 
 set1 = {
     "AAL": ["Fuc"],
@@ -76,5 +76,5 @@ for lectin, properties in lectin_binding_motif.items():
 
     print(f"Processing lectin: {lectin}")
     metric_df_[lectin] = metric_df(lectin, properties)
-    plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
+    #plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
 
