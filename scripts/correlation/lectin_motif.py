@@ -2,7 +2,6 @@ from scripts.correlation.func.metric_df import metric_df
 from scripts.correlation.func.plot_corr_regg import plot_combined_colors
 
 
-# Example usage
 
 lectin_binding_motif = {
     "AAL": {
