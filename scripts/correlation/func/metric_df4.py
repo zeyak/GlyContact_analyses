@@ -5,11 +5,9 @@ from glycowork.motif.graph import  glycan_to_nxGraph
 from glycowork.motif.processing import get_class
 import sys
 
-from scripts.correlation.func.dev.metric_df4_copy import binding_data_path
 
 # File paths
 flex_data_path = 'data/glycan_graphs.pkl'
-#binding_data_path = 'data/glycan_binding.csv'
 binding_data_path = 'data/20241206_glycan_binding.csv'
 
 
@@ -513,6 +511,7 @@ def generate_metrics_for_glycan___(binding_motif, glycan_scores, flex_data):
         print(f"Missing glycans: {missing_glycans}")
 
     return metric_data
+
 """
 matched_glycan = 'Fuc(a1-2)Gal(b1-3)GlcNAc'
 lectin = "CMA"
