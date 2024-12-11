@@ -22,3 +22,4 @@ for lectin, binding_motif in lectin_binding_motif.items():
     metric_df_[lectin] = metric_df(lectin,binding_motif)
     plot_combined_colors(metric_df_[lectin], lectin, binding_motif)
 
+#test
