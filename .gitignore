@@ -1,5 +1,5 @@
 /data/
 /.idea
 .gitignore
-/scripts/correlation/plots/set2/
-/scripts/correlation/plots/set1/
+/scripts/correlation/plots/dev/set2/
+/scripts/correlation/plots/dev/set1/
