@@ -1,6 +1,7 @@
 import pickle
 from csv import DictWriter
 from typing import Dict
+import numpy as np
 
 import pandas as pd
 from glycowork.motif.graph import compare_glycans, subgraph_isomorphism
@@ -43,34 +44,6 @@ def find_matching_glycan(flex_data , glycan):
             return glycan
     return None
 
-def map_daniel_to_luc_graph_(matched_glycan, flex_data, daniel_selected_nodes):
-    """
-    Map selected nodes from a Daniel graph to a corresponding Luc graph based on a predefined mapping.
-    """
-    daniel_graph = glycan_to_nxGraph(matched_glycan)
-    luc_graph = flex_data.get(matched_glycan)
-
-    # Define the mapping logic between Daniel and Luc graphs
-    def create_mapping():
-        node_count_daniel = len(daniel_graph.nodes)
-        node_count_luc = len(luc_graph.nodes)
-        if node_count_daniel % 2 == 1:
-            max_index = node_count_daniel
-        else:
-            max_index = node_count_daniel - 1
-        return dict(zip(range(0, max_index, 2), range(node_count_luc, 0, -1)))
-
-    # Generate the mapping dictionary
-    map_dict = create_mapping()
-
-    # Map the selected nodes from the Daniel graph to the Luc graph
-    luc_selected_nodes = []
-    for node in daniel_selected_nodes:
-        if node in map_dict:
-            luc_selected_nodes.append(map_dict[node])
-
-    return luc_selected_nodes
-
 def map_daniel_to_luc_graph(matched_glycan, flex_data, daniel_selected_nodes):
     """
     Map selected nodes from a Daniel graph to a corresponding Luc graph based on a predefined mapping.
@@ -100,7 +73,6 @@ def map_daniel_to_luc_graph(matched_glycan, flex_data, daniel_selected_nodes):
 
     return luc_selected_nodes
 
-
 def compute_sasa_metrics(nodes):
     """Compute sum, mean, and max SASA metrics for a list of numeric scores."""
     if not nodes:
@@ -114,7 +86,10 @@ def compute_overall_flexibility(flexibility_values ):
     """Compute the overall flexibility for a glycan."""
     return sum(flexibility_values) / len(flexibility_values) if flexibility_values else None
 
-def process_glycan_with_motifs(matched_glycan: str, properties: str,  flex_data: dict):
+def process_glycan_with_motifs(matched_glycan: str,
+                               properties: str,
+                               flex_data: dict[str, Graph]):
+
     """
     Process a glycan string to find nodes matching binding motifs and calculate metrics.
     Handles both single and multiple binding motifs.
@@ -212,7 +187,10 @@ def generate_metrics_for_glycan(properties:str,
         if matching_monosaccharides:
             sasa_metrics = compute_sasa_metrics(sasa_weighted)
             overall_flexibility = compute_overall_flexibility(flexibility_weighted)
+            # write nan if returns an empty string
             glycan_class = get_class(matched_glycan)
+            if glycan_class == "":
+                glycan_class = np.nan
 
             metric_data.append({
                 "glycan": glycan,

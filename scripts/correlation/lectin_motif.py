@@ -4,6 +4,9 @@ from scripts.correlation.func.plot_corr_regg import plot_combined_colors
 
 
 lectin_binding_motif = {
+    "AOL": { "motif": ["Fuc"],
+             "termini_list": [["t"]] },
+
     "AAL": {
         "motif": ["Fuc"],
         "termini_list": [["t"]]
@@ -44,4 +47,9 @@ for lectin, properties in lectin_binding_motif.items():
 
     metric_df_[lectin] = metric_df(lectin,properties)
     plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
+
+
+
+
+
 

@@ -18,8 +18,9 @@ def plot_combined_colors(metric_df, lectin, binding_motif):
         x='weighted_mean_flexibility',
         y='binding_score',
         data=metric_df,
-        hue="class",  # Color by glycan class
-        palette="tab10",  # Use glycan column for coloring
+        hue="class",
+        hue_order=['O', 'N', "free","lipid", 'NaN'],
+        palette="tab10",
         alpha=0.7
     )
     sns.regplot(
@@ -41,8 +42,10 @@ def plot_combined_colors(metric_df, lectin, binding_motif):
         x='SASA_weighted',
         y='binding_score',
         data=metric_df,
-        hue='class',  # Use glycan column for coloring
+        hue='class',
+        hue_order=['O', 'N', "free","lipid", 'NaN'],
         palette="tab10",
+        # Use glycan column for coloring
         alpha=0.7
     )
     sns.regplot(
