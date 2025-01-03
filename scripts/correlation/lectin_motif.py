@@ -46,7 +46,7 @@ for lectin, properties in lectin_binding_motif.items():
     print(f"Termini: {properties['termini_list']}")
 
     metric_df_[lectin] = metric_df(lectin,properties)
-    plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
+    #plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
 
 
 

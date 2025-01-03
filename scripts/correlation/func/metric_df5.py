@@ -13,41 +13,148 @@ from networkx.classes import Graph
 import networkx as nx
 
 
-# File paths
-flex_data_path = 'data/glycan_graphs.pkl'
-binding_data_path = 'data/20241206_glycan_binding.csv'
+def load_data():
+    flex_data_path = 'data/glycan_graphs.pkl'
+    binding_data_path = 'data/20241206_glycan_binding.csv'
 
-def load_data_pdb():
     """Load glycan flexibility data and binding data."""
     with open(flex_data_path, 'rb') as file:
         flex_data = pickle.load(file)
-    return flex_data
+    binding_df = pd.read_csv(binding_data_path)
+    return flex_data, binding_df
 
-def load_data():
-    """Load glycan flexibility data and binding data."""
-    with open(flex_data_path, 'rb') as file:
-        flex_data_pdb_g = pickle.load(file)
+def filter_binding_data(binding_df: pd.DataFrame, lectin: str) -> pd.DataFrame:
+    """Filter the binding DataFrame for the given lectin."""
+    filtered_df = binding_df[binding_df.iloc[:, -1].eq(lectin)]
+    filtered_df = filtered_df.dropna(axis=1, how='all')  # Drop columns with all NaN values
+    return filtered_df
 
-    flex_data = {}
-    invalid_graphs = []  # List to store invalid graphs
+def get_glycan_scores(filtered_df: dict[str, float]) -> Dict[str, float]:
+    """Calculate mean binding scores for glycans."""
+    lectin_df = filtered_df.iloc[:, :-2]  # Exclude "protein" and "target" columns
+    glycan_scores = lectin_df.mean(axis=0).to_dict()
+    return glycan_scores
 
-    for glycan, graph in zip(flex_data_pdb_g.keys(), flex_data_pdb_g.values()):  # Ensure correct glycan-graph pairing
+def find_matching_glycan(flex_data , glycan):
+    """Find the matching glycan in flex_data."""
+    for flex_glycan in flex_data.keys():
+        if compare_glycans(glycan, flex_glycan):
+            #return flex_glycan.keys(glycan)
+            return glycan
+    return None
+
+def map_daniel_to_luc_graph(matched_glycan, flex_data, daniel_selected_nodes):
+    """
+    Map selected nodes from a Daniel graph to a corresponding Luc graph based on a predefined mapping.
+    """
+    daniel_graph = glycan_to_nxGraph(matched_glycan)
+    luc_graph = flex_data.get(matched_glycan)
+
+    # Define the mapping logic between Daniel and Luc graphs
+    def create_mapping():
+        if len(daniel_graph.nodes) % 2 == 1:
+            dan_max = len(daniel_graph.nodes)
+            luc_max = len(luc_graph.nodes)
+            map_dict = dict(zip(range(0, dan_max, 2), range(luc_max, 0, -1)))
+        else:
+            dan_max = len(daniel_graph.nodes) - 1
+            luc_max = len(luc_graph.nodes)
+            map_dict = dict(zip(range(0, dan_max, 2), range(luc_max, 0, -1)))
+        return map_dict
+    # Generate the mapping dictionary
+    map_dict = create_mapping()
+
+    # Map the selected nodes from the Daniel graph to the Luc graph
+    luc_selected_nodes = []
+    for node in daniel_selected_nodes:
+        if node in map_dict:
+            luc_selected_nodes.append(map_dict[node])
+
+    return luc_selected_nodes
+
+def compute_sasa_metrics(nodes):
+    """Compute sum, mean, and max SASA metrics for a list of numeric scores."""
+    if not nodes:
+        return {"SASA_weighted": None, "SASA_weighted_max": None, "SASA_weighted_sum": None}
+    SASA_weighted_sum = sum(nodes)
+    SASA_weighted = SASA_weighted_sum / len(nodes)
+    SASA_weighted_max = max(nodes)
+    return {"SASA_weighted": SASA_weighted, "SASA_weighted_max": SASA_weighted_max, "SASA_weighted_sum": SASA_weighted_sum}
+
+def compute_overall_flexibility(flexibility_values ):
+    """Compute the overall flexibility for a glycan."""
+    return sum(flexibility_values) / len(flexibility_values) if flexibility_values else None
+
+def process_glycan_with_motifs_map_daniel(matched_glycan: str,
+                               properties: str,
+                               flex_data: dict[str, Graph]):
+
+    """
+    Process a glycan string to find nodes matching binding motifs and calculate metrics.
+    Handles both single and multiple binding motifs.
+    """
+    matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs = [], [], [], []
+
+    motifs = properties["motif"]
+    termini_list = properties["termini_list"]
+
+    for motif, termini in zip(motifs, termini_list):
         try:
-            # Skip invalid graphs before converting
-            if not hasattr(graph, 'neighbors') or not graph:
-                invalid_graphs.append(glycan)
+            # Perform subgraph isomorphism
+            try:
+                is_present, matched_nodes = subgraph_isomorphism(
+                    matched_glycan, motif,
+                    return_matches=True,
+                    termini_list=termini
+                )
+                if not is_present:
+                    continue
+            except Exception as e:
+                print(f"Subgraph isomorphism error for glycan {matched_glycan} with motif {motif}: {e}")
                 continue
 
-            converted_graph = convert_pdb_graph_to_glycowork(graph)
-            flex_data[glycan] = converted_graph  # Store the converted graph for the glycan
+            found_motifs.append(motif)
+            print("")
+            print(f"matched_glycan: {matched_glycan}")
+            print(f"Processing motif: {motif}")
+
+            matched_nodes = [node for sublist in matched_nodes for node in sublist] \
+                if isinstance(matched_nodes[0], list) else matched_nodes
+
+            # Select monosaccharides
+            try:
+                matched_mono = [matched_nodes[index] for index in range(0, len(matched_nodes), 2)]
+                print(f"matched_mono: {matched_mono}")
+
+                selected_mono = map_daniel_to_luc_graph(matched_glycan, flex_data, matched_mono)
+                print(f"selected_mono: {selected_mono}")
+
+            except Exception as e:
+                print(f"Mapping error in map_daniel_to_luc_graph for glycan {matched_glycan}: {e}")
+                continue
+
+            # Extract attributes from graph nodes
+            graph = flex_data.get(matched_glycan)
+            if graph and hasattr(graph, "nodes"):
+                print(f"graph.nodes: {graph.nodes}")
+                print(f"graph.attributes: {graph.nodes(data=True)}")
+                for mono in selected_mono:
+                    try:
+                        attributes = graph.nodes[mono]
+                        matching_monosaccharides.append(attributes.get("Monosaccharide", 0))
+                        sasa_weighted.append(attributes.get("Weighted Score", 0))
+                        flexibility_weighted.append(attributes.get("weighted_mean_flexibility", 0))
+                        print(f"matching_monosaccharides: {matching_monosaccharides}")
+                        print(f"mono attributes: {attributes}")
+                    except Exception as e:
+                        print(f"Error extracting attributes for node {mono} in glycan {matched_glycan}: {e}")
+            else:
+                print(f"Skipping invalid graph or graph with no nodes for glycan: {matched_glycan}")
 
         except Exception as e:
-            print(f"Error converting graph for glycan {glycan}: {e}")
+            print(f"General error processing glycan {matched_glycan} with motif {motif}: {e}")
 
-    # Load binding data
-    binding_df = pd.read_csv(binding_data_path)
-
-    return flex_data, binding_df, invalid_graphs
+    return matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs
 
 def convert_pdb_graph_to_glycowork(g):
     """
@@ -130,43 +237,13 @@ def convert_pdb_graph_to_glycowork(g):
 
     return new_g
 
-def filter_binding_data(binding_df: pd.DataFrame, lectin: str) -> pd.DataFrame:
-    """Filter the binding DataFrame for the given lectin."""
-    filtered_df = binding_df[binding_df.iloc[:, -1].eq(lectin)]
-    filtered_df = filtered_df.dropna(axis=1, how='all')  # Drop columns with all NaN values
-    return filtered_df
-
-def get_glycan_scores(filtered_df: dict[str, float]) -> Dict[str, float]:
-    """Calculate mean binding scores for glycans."""
-    lectin_df = filtered_df.iloc[:, :-2]  # Exclude "protein" and "target" columns
-    glycan_scores = lectin_df.mean(axis=0).to_dict()
-    return glycan_scores
-
-def find_matching_glycan(flex_data , glycan):
-    """Find the matching glycan in flex_data."""
-    for flex_glycan in flex_data.keys():
-        if compare_glycans(glycan, flex_glycan):
-            return glycan
-    return None
-
-def compute_sasa_metrics(nodes):
-    """Compute sum, mean, and max SASA metrics for a list of numeric scores."""
-    if not nodes:
-        return {"SASA_weighted": None, "SASA_weighted_max": None, "SASA_weighted_sum": None}
-    SASA_weighted_sum = sum(nodes)
-    SASA_weighted = SASA_weighted_sum / len(nodes)
-    SASA_weighted_max = max(nodes)
-    return {"SASA_weighted": SASA_weighted, "SASA_weighted_max": SASA_weighted_max, "SASA_weighted_sum": SASA_weighted_sum}
-def compute_overall_flexibility(flexibility_values ):
-    """Compute the overall flexibility for a glycan."""
-    return sum(flexibility_values) / len(flexibility_values) if flexibility_values else None
-
 def process_glycan_with_motifs(matched_glycan: str,
                                properties: dict,
                                flex_data: dict[str, nx.Graph]):
     """
     Process a glycan string to find nodes matching binding motifs and calculate metrics.
     Handles both single and multiple binding motifs.
+    Includes the integration of convert_pdb_graph_to_glycowork.
 
     Args:
         matched_glycan (str): Identifier of the glycan to process.
@@ -203,21 +280,25 @@ def process_glycan_with_motifs(matched_glycan: str,
                 if isinstance(matched_nodes[0], list) else matched_nodes
             print(f"Matched nodes: {matched_nodes}")
 
-            # Access the graph directly from flex_data
-            pdb_graph = flex_data.get(matched_glycan)
-            if not pdb_graph:
-                print(f"No graph found for glycan: {matched_glycan}")
+            # Convert PDB graph to glycowork format and select nodes directly
+            try:
+                pdb_graph = flex_data.get(matched_glycan)
+                if pdb_graph:
+                    glycowork_graph = convert_pdb_graph_to_glycowork(pdb_graph)
+
+                selected_mono = [node for node in matched_nodes if node in glycowork_graph.nodes]
+                print(f"Selected monosaccharides: {selected_mono}")
+
+            except Exception as e:
+                print(f"Error processing pdb graph of {matched_glycan}: {e}")
                 continue
 
-            selected_mono = [node for node in matched_nodes if node in pdb_graph.nodes]
-            print(f"Selected monosaccharides: {selected_mono}")
-
             # Extract attributes from graph nodes
-            if hasattr(pdb_graph, "nodes"):
-                print(f"Graph nodes: {pdb_graph.nodes(data=True)}")
+            if glycowork_graph and hasattr(glycowork_graph, "nodes"):
+                print(f"Graph nodes: {glycowork_graph.nodes(data=True)}")
                 for mono in selected_mono:
                     try:
-                        attributes = pdb_graph.nodes[mono]
+                        attributes = glycowork_graph.nodes[mono]
                         matching_monosaccharides.append(attributes.get("string_labels", ""))
                         sasa_weighted.append(attributes.get("Weighted Score", 0))
                         flexibility_weighted.append(attributes.get("weighted_mean_flexibility", 0))
@@ -236,6 +317,7 @@ def process_glycan_with_motifs(matched_glycan: str,
 
     return matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs
 
+
 def generate_metrics_for_glycan(properties:str,
                                 glycan_scores: dict,
                                 flex_data: dict[str, Graph]) -> list[dict]:
@@ -245,6 +327,11 @@ def generate_metrics_for_glycan(properties:str,
     metric_data = []
     missing_glycans = []
 
+    # Filter glycans without branches
+    #glycans_no_branches = [glycan for glycan in glycan_scores if "]" not in glycan]
+    #print(f"Processing {len(glycans_no_branches)} glycans without branches...")
+
+    #for glycan in glycans_no_branches:
     for glycan in glycan_scores:
         binding_score = glycan_scores[glycan]
         matched_glycan = find_matching_glycan(flex_data, glycan)
@@ -255,7 +342,8 @@ def generate_metrics_for_glycan(properties:str,
 
         # Process the matched glycan
         matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs = process_glycan_with_motifs(
-            matched_glycan, properties, flex_data)
+            matched_glycan, properties, flex_data
+        )
 
         if matching_monosaccharides:
             sasa_metrics = compute_sasa_metrics(sasa_weighted)
@@ -283,12 +371,11 @@ def generate_metrics_for_glycan(properties:str,
 
     return metric_data
 
-
 def metric_df(lectin, properties):
     """
     Generate a metrics DataFrame for a given lectin and its properties.
     """
-    flex_data, binding_df, invalid_graphs = load_data()
+    flex_data, binding_df = load_data()
     filtered_df = filter_binding_data(binding_df, lectin)
     if filtered_df.empty:
         print(f"No binding data found for {lectin}.")
@@ -300,7 +387,15 @@ def metric_df(lectin, properties):
     metric_df = pd.DataFrame(metric_data)
     metric_df.set_index('glycan', inplace=True)
     metric_df.to_excel(f'scripts/correlation/metric_df/{lectin}_metrics.xlsx', index=True, header=True)
+    sys.stdout = open('scripts/correlation/metric_df/metric_df.log', 'w')
     return metric_df
 
+# Example usage
+"""lectin= 'AOL'
 
-sys.stdout = open('scripts/correlation/metric_df/metric_df.log', 'w')
+properties= {'motif': ['Fuc'], 'termini_list': [['t']]}
+
+matched_glycan= 'Fuc(a1-2)Gal(b1-4)[Fuc(a1-3)]GlcNAc(b1-3)[Fuc(a1-3)[Gal(b1-4)]GlcNAc(b1-6)]Gal(b1-4)Glc'
+
+df= metric_df(lectin, properties)
+"""
