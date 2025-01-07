@@ -1,6 +1,5 @@
-from scripts.correlation.func.metric_df import metric_df
-from scripts.correlation.func.plot_corr_regg import plot_combined_colors
-
+from scripts.correlation.func.metric_df import metric_df, perform_mediation_analysis_with_class
+from scripts.correlation.func.plot_corr_regg import plot_combined_colors, plot_separate_class,visualize_mediation_results_with_class
 
 
 lectin_binding_motif = {
@@ -47,6 +46,22 @@ for lectin, properties in lectin_binding_motif.items():
 
     metric_df_[lectin] = metric_df(lectin,properties)
     #plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
+    #plot_separate_class(metric_df_[lectin], lectin, properties["motif"])
+
+    effects = perform_mediation_analysis_with_class(
+    metric_df=metric_df_[lectin],
+    independent_var='weighted_mean_flexibility',
+    class_var='class',
+    dependent_var='binding_score')
+
+    visualize_mediation_results_with_class(
+        metric_df=metric_df_[lectin],
+        independent_var='weighted_mean_flexibility',
+        class_var='class',
+        dependent_var='binding_score',
+        effects=effects
+    )
+
 
 
 

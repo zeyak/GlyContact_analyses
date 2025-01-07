@@ -1,16 +1,15 @@
 import pickle
-from csv import DictWriter
 from typing import Dict
 import numpy as np
-
 import pandas as pd
+import pingouin as pg
 from glycowork.motif.graph import compare_glycans, subgraph_isomorphism
 from glycowork.motif.graph import  glycan_to_nxGraph
 from glycowork.motif.processing import get_class
 import sys
-
 from networkx.classes import Graph
 import networkx as nx
+from sklearn.preprocessing import LabelEncoder
 
 
 # File paths
@@ -301,6 +300,51 @@ def metric_df(lectin, properties):
     metric_df.set_index('glycan', inplace=True)
     metric_df.to_excel(f'scripts/correlation/metric_df/{lectin}_metrics.xlsx', index=True, header=True)
     return metric_df
-
-
 sys.stdout = open('scripts/correlation/metric_df/metric_df.log', 'w')
+def perform_mediation_analysis_with_class(metric_df, independent_var, class_var, dependent_var):
+    """
+    Perform mediation analysis to test if glycan class mediates the relationship between
+    the independent variable and the dependent variable. Drops rows with NaN values in the class column.
+
+    Parameters:
+        metric_df (pd.DataFrame): The DataFrame containing metrics for mediation analysis.
+        independent_var (str): Name of the independent variable (e.g., 'weighted_mean_flexibility').
+        class_var (str): Name of the mediator variable (categorical, e.g., 'class').
+        dependent_var (str): Name of the dependent variable (e.g., 'binding_score').
+
+    Returns:
+        dict: A dictionary containing mediation results and total, direct, and indirect effects.
+    """
+    from sklearn.preprocessing import LabelEncoder
+    import pingouin as pg
+
+    # Drop rows with NaN values in the class column
+    metric_df = metric_df.dropna(subset=[class_var])
+
+    # Encode class as numeric (binary: 0 and 1)
+    label_encoder = LabelEncoder()
+    metric_df['encoded_class'] = label_encoder.fit_transform(metric_df[class_var])
+
+    # Perform mediation analysis
+    mediation_results = pg.mediation_analysis(
+        data=metric_df,
+        x=independent_var,  # Independent variable
+        m='encoded_class',  # Encoded mediator (glycan class)
+        y=dependent_var,  # Dependent variable
+        alpha=0.05
+    )
+
+    # Extract mediation effects
+    total_effect = mediation_results.loc[mediation_results['path'] == 'Total', 'coef'].values[0]
+    direct_effect = mediation_results.loc[mediation_results['path'] == 'Direct', 'coef'].values[0]
+    indirect_effect = mediation_results.loc[mediation_results['path'] == 'Indirect', 'coef'].values[0]
+
+    return {
+        'results': mediation_results,
+        'total_effect': total_effect,
+        'direct_effect': direct_effect,
+        'indirect_effect': indirect_effect
+    }
+
+
+
