@@ -58,8 +58,8 @@ for lectin, properties in lectin_binding_motif.items():
         metric_df=metric_df_[lectin],
         lectin=lectin,
         binding_motif=properties["motif"],
-        #independent_var='weighted_mean_flexibility',
-        independent_var='SASA_weighted_sum',
+        independent_var='weighted_mean_flexibility',
+        #independent_var='SASA_weighted_sum',
         class_var='class',
         dependent_var='binding_score',
         effects=effects
