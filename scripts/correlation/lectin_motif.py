@@ -56,7 +56,10 @@ for lectin, properties in lectin_binding_motif.items():
 
     visualize_mediation_results_with_class(
         metric_df=metric_df_[lectin],
-        independent_var='weighted_mean_flexibility',
+        lectin=lectin,
+        binding_motif=properties["motif"],
+        #independent_var='weighted_mean_flexibility',
+        independent_var='SASA_weighted_sum',
         class_var='class',
         dependent_var='binding_score',
         effects=effects

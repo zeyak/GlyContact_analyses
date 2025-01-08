@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
-
+import os
 
 sns.set(style="whitegrid")
 plt.rcParams['grid.color'] = 'gray'
@@ -164,7 +164,7 @@ def plot_separate_class(metric_df, lectin, binding_motif):
     plt.show()
 
 
-def visualize_mediation_results_with_class(metric_df, independent_var, class_var, dependent_var, effects):
+def visualize_mediation_results_with_class_(metric_df, independent_var, class_var, dependent_var, effects):
     """
     Visualize mediation analysis results with a path diagram, scatterplots, and a bar chart.
 
@@ -239,6 +239,110 @@ def visualize_mediation_results_with_class(metric_df, independent_var, class_var
         plt.bar(effects_labels, effects_values, color=['blue', 'green', 'orange'])
         plt.title("Mediation Effects (Class as Mediator)")
         plt.ylabel("Effect Value")
+        plt.show()
+
+    # Call visualizations
+    print("\nStep 1: Mediation Path Diagram")
+    plot_mediation_path()
+
+    print("\nStep 2: Scatterplots")
+    plot_scatterplots()
+
+    print("\nStep 3: Mediation Effects Bar Chart")
+    plot_effects_bar_chart()
+
+def visualize_mediation_results_with_class(metric_df,
+                                           independent_var,
+                                           class_var,
+                                           dependent_var,
+                                           effects,
+                                           lectin,
+                                           binding_motif):
+    """
+    Visualize mediation analysis results with a path diagram, scatterplots, and a bar chart.
+
+    Parameters:
+        metric_df (pd.DataFrame): The data containing variables for analysis.
+        independent_var (str): Name of the independent variable.
+        class_var (str): Name of the mediator variable (categorical, e.g., 'class').
+        dependent_var (str): Name of the dependent variable.
+        effects (dict): Dictionary containing total, direct, and indirect effects.
+        lectin (str): Name of the lectin being analyzed.
+        binding_motif (str): Name of the binding motif being analyzed.
+        save_dir (str): Directory where plots will be saved. Defaults to the current directory.
+    """
+    save_dir = f"scripts/correlation/plots/mediation/{independent_var}/"
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Unpack effects
+    total_effect = effects['total_effect']
+    direct_effect = effects['direct_effect']
+    indirect_effect = effects['indirect_effect']
+
+    # Step 1: Path Diagram
+    def plot_mediation_path():
+        G = nx.DiGraph()
+        G.add_edge(independent_var, 'Class (Mediator)', weight=indirect_effect)
+        G.add_edge('Class (Mediator)', dependent_var, weight=indirect_effect)
+        G.add_edge(independent_var, dependent_var, weight=direct_effect)
+
+        pos = {
+            independent_var: (0, 1),
+            'Class (Mediator)': (1, 0.5),
+            dependent_var: (2, 1)
+        }
+
+        plt.figure(figsize=(8, 6))
+        nx.draw_networkx_nodes(G, pos, node_size=2000, node_color='lightblue')
+        edges = nx.get_edge_attributes(G, 'weight')
+        nx.draw_networkx_edges(G, pos, arrowstyle='-|>', arrowsize=20)
+        nx.draw_networkx_labels(G, pos, font_size=12, font_color='black')
+        nx.draw_networkx_edge_labels(
+            G, pos, edge_labels={k: f"{v:.3f}" for k, v in edges.items()}, font_color='red'
+        )
+        plt.title(f"Mediation Path Diagram\nLectin: {lectin}, Motif: {binding_motif}")
+        plt.axis('off')
+        plt.savefig(os.path.join(save_dir, f"{lectin}_{binding_motif}_mediation_path.png"))
+        plt.show()
+
+    # Step 2: Scatterplots
+    def plot_scatterplots():
+        plt.figure(figsize=(12, 6))
+
+        # Independent vs Class (Mediator)
+        plt.subplot(1, 3, 1)
+        sns.boxplot(x=class_var, y=independent_var, data=metric_df)
+        plt.title(f"{independent_var} vs. {class_var}\nLectin: {lectin}, Motif: {binding_motif}")
+        plt.xlabel(class_var)
+        plt.ylabel(independent_var)
+
+        # Class (Mediator) vs Dependent
+        plt.subplot(1, 3, 2)
+        sns.boxplot(x=class_var, y=dependent_var, data=metric_df)
+        plt.title(f"{class_var} vs. {dependent_var}\nLectin: {lectin}, Motif: {binding_motif}")
+        plt.xlabel(class_var)
+        plt.ylabel(dependent_var)
+
+        # Independent vs Dependent
+        plt.subplot(1, 3, 3)
+        sns.regplot(x=independent_var, y=dependent_var, data=metric_df)
+        plt.title(f"{independent_var} vs. {dependent_var}\nLectin: {lectin}, Motif: {binding_motif}")
+        plt.xlabel(independent_var)
+        plt.ylabel(dependent_var)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(save_dir, f"{lectin}_{binding_motif}_scatterplots.png"))
+        plt.show()
+
+    # Step 3: Bar Chart for Effects
+    def plot_effects_bar_chart():
+        effects_labels = ['Total Effect', 'Direct Effect', 'Indirect Effect']
+        effects_values = [total_effect, direct_effect, indirect_effect]
+        plt.figure(figsize=(8, 6))
+        plt.bar(effects_labels, effects_values, color=['blue', 'green', 'orange'])
+        plt.title(f"Mediation Effects\nLectin: {lectin}, Motif: {binding_motif}")
+        plt.ylabel("Effect Value")
+        plt.savefig(os.path.join(save_dir, f"{lectin}_{binding_motif}_effects_bar_chart.png"))
         plt.show()
 
     # Call visualizations

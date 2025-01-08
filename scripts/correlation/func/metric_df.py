@@ -301,10 +301,11 @@ def metric_df(lectin, properties):
     metric_df.to_excel(f'scripts/correlation/metric_df/{lectin}_metrics.xlsx', index=True, header=True)
     return metric_df
 sys.stdout = open('scripts/correlation/metric_df/metric_df.log', 'w')
+
 def perform_mediation_analysis_with_class(metric_df, independent_var, class_var, dependent_var):
     """
     Perform mediation analysis to test if glycan class mediates the relationship between
-    the independent variable and the dependent variable. Drops rows with NaN values in the class column.
+    the independent variable and the dependent variable. Handles NaN values and single-class cases.
 
     Parameters:
         metric_df (pd.DataFrame): The DataFrame containing metrics for mediation analysis.
@@ -313,28 +314,34 @@ def perform_mediation_analysis_with_class(metric_df, independent_var, class_var,
         dependent_var (str): Name of the dependent variable (e.g., 'binding_score').
 
     Returns:
-        dict: A dictionary containing mediation results and total, direct, and indirect effects.
+        dict: A dictionary containing mediation results and total, direct, and indirect effects,
+              or a message indicating mediation cannot be performed.
     """
-    from sklearn.preprocessing import LabelEncoder
-    import pingouin as pg
 
-    # Drop rows with NaN values in the class column
-    metric_df = metric_df.dropna(subset=[class_var])
+    # Step 1: Drop rows with NaN in the class column
+    metric_df = metric_df.dropna(subset=[class_var]).copy()
 
-    # Encode class as numeric (binary: 0 and 1)
+    # Step 2: Check the number of unique classes in the mediator column
+    unique_classes = metric_df[class_var].unique()
+    if len(unique_classes) < 2:
+        return {
+            'message': f"Mediation analysis cannot be performed. Found only one unique class: {unique_classes}."
+        }
+
+    # Step 3: Encode class as binary (0 and 1) using LabelEncoder
     label_encoder = LabelEncoder()
-    metric_df['encoded_class'] = label_encoder.fit_transform(metric_df[class_var])
+    metric_df.loc[:, 'encoded_class'] = label_encoder.fit_transform(metric_df[class_var])
 
-    # Perform mediation analysis
+    # Step 4: Perform mediation analysis
     mediation_results = pg.mediation_analysis(
         data=metric_df,
         x=independent_var,  # Independent variable
-        m='encoded_class',  # Encoded mediator (glycan class)
+        m='encoded_class',  # Encoded mediator (binary glycan class)
         y=dependent_var,  # Dependent variable
         alpha=0.05
     )
 
-    # Extract mediation effects
+    # Step 5: Extract mediation effects
     total_effect = mediation_results.loc[mediation_results['path'] == 'Total', 'coef'].values[0]
     direct_effect = mediation_results.loc[mediation_results['path'] == 'Direct', 'coef'].values[0]
     indirect_effect = mediation_results.loc[mediation_results['path'] == 'Indirect', 'coef'].values[0]
@@ -345,6 +352,3 @@ def perform_mediation_analysis_with_class(metric_df, independent_var, class_var,
         'direct_effect': direct_effect,
         'indirect_effect': indirect_effect
     }
-
-
-
