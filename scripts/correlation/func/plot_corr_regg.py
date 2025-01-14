@@ -44,7 +44,7 @@ def plot_combined_colors(metric_df, lectin, binding_motif):
         y='binding_score',
         data=metric_df,
         hue='class',
-        hue_order=['N', 'O', "free","lipid", ""],
+        hue_order=['N', 'O', "free", "lipid", "lipid/free" , ''],
         palette="tab10",
         # Use glycan column for coloring
         alpha=0.7
