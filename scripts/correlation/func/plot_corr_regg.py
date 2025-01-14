@@ -20,7 +20,7 @@ def plot_combined_colors(metric_df, lectin, binding_motif):
         y='binding_score',
         data=metric_df,
         hue="class",
-        hue_order=['N', 'O', "free","lipid", 'NaN'],
+        hue_order=['N', 'O', "free", "lipid", "lipid/free" , ""],
         palette="tab10",
         alpha=0.7
     )
@@ -44,7 +44,7 @@ def plot_combined_colors(metric_df, lectin, binding_motif):
         y='binding_score',
         data=metric_df,
         hue='class',
-        hue_order=['N', 'O', "free","lipid", 'NaN'],
+        hue_order=['N', 'O', "free","lipid", ""],
         palette="tab10",
         # Use glycan column for coloring
         alpha=0.7
@@ -90,7 +90,7 @@ def plot_separate_class(metric_df, lectin, binding_motif):
             y='binding_score',
             data=data,
             hue="class",
-            hue_order=['N', 'O', "free","lipid", 'NaN'],  # Ensure consistent color scheme
+            hue_order=['N', 'O', "free", "lipid", "lipid/free" , ""],  # Ensure consistent color scheme
             palette="tab10",
             alpha=0.7,
             legend=False  # Suppress legend for this plot
@@ -114,7 +114,7 @@ def plot_separate_class(metric_df, lectin, binding_motif):
             y='binding_score',
             data=data,
             hue='class',
-            hue_order=['N', 'O', "free","lipid", 'NaN'],  # Ensure consistent color scheme
+            hue_order=['N', 'O', "free", "lipid", "lipid/free" , ""],  # Ensure consistent color scheme
             palette="tab10",
             alpha=0.7,
             legend=False  # Suppress legend for this plot
@@ -222,7 +222,7 @@ def visualize_mediation_results_with_class(metric_df,
         plt.figure(figsize=(12, 6))
 
         # Define color palette for classes
-        custom_palette = {"N": "blue", "O": "orange"}
+        custom_palette = {"N": "blue", "O": "orange", "free": "green", "lipid": "red", "lipid/free": "purple", "": "gray"}
 
         # Independent vs Class (Mediator)
         plt.subplot(1, 3, 1)

@@ -202,8 +202,8 @@ def generate_metrics_for_glycan(properties:str,
             overall_flexibility = compute_overall_flexibility(flexibility_weighted)
             # write nan if returns an empty string
             glycan_class = get_class(matched_glycan)
-            if glycan_class == "":
-                glycan_class = np.nan
+            #if glycan_class == "":
+             #   glycan_class = np.nan
 
             metric_data.append({
                 "glycan": glycan,
