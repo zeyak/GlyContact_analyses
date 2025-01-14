@@ -123,7 +123,6 @@ def process_glycan_with_motifs(matched_glycan: str,
 
     for motif, termini in zip(motifs, termini_list):
         try:
-            # Perform subgraph isomorphism
             try:
                 is_present, matched_nodes = subgraph_isomorphism(
                     matched_glycan, motif,
@@ -158,7 +157,8 @@ def process_glycan_with_motifs(matched_glycan: str,
                 for mono in selected_mono:
                     try:
                         attributes = pdb_graph.nodes[mono]
-                        matching_monosaccharides.append(attributes.get("string_labels", ""))
+                        #matching_monosaccharides.append(attributes.get("string_labels", ""))
+                        matching_monosaccharides.append(attributes.get('Monosaccharide', ""))
                         sasa_weighted.append(attributes.get("Weighted Score", 0))
                         flexibility_weighted.append(attributes.get("weighted_mean_flexibility", 0))
 
