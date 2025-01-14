@@ -1,5 +1,5 @@
 import pickle
-from typing import Dict, Tuple, List
+from typing import Dict
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -13,62 +13,225 @@ from sklearn.preprocessing import LabelEncoder
 
 
 # File paths
-FLEX_DATA_PATH = 'data/glycan_graphs.pkl'
-BINDING_DATA_PATH = 'data/20241206_glycan_binding.csv'
+flex_data_path = 'data/glycan_graphs.pkl'
+binding_data_path = 'data/20241206_glycan_binding.csv'
 
 
-def load_data() -> Tuple[Dict[str, nx.Graph], pd.DataFrame, List[str]]:
-    """Load glycan flexibility data, convert graphs, and load binding data."""
-    flex_data, invalid_graphs = load_and_convert_flex_data(FLEX_DATA_PATH)
-    binding_df = pd.read_csv(BINDING_DATA_PATH)
-    return flex_data, binding_df, invalid_graphs
 
+def load_data_pdb():
+    """Load glycan flexibility data and binding data."""
+    with open(flex_data_path, 'rb') as file:
+        flex_data = pickle.load(file)
+    return flex_data
 
-def load_and_convert_flex_data(file_path: str) -> Tuple[Dict[str, nx.Graph], List[str]]:
-    """Load glycan flexibility data and convert valid graphs."""
-    with open(file_path, 'rb') as file:
+def load_data():
+    """Load glycan flexibility data and binding data."""
+    with open(flex_data_path, 'rb') as file:
         flex_data_pdb_g = pickle.load(file)
 
     flex_data = {}
-    invalid_graphs = []
+    invalid_graphs = []  # List to store invalid graphs
 
-    for glycan, graph in flex_data_pdb_g.items():
+    for glycan, graph in zip(flex_data_pdb_g.keys(), flex_data_pdb_g.values()):  # Ensure correct glycan-graph pairing
         try:
-            # Skip invalid graphs
+            # Skip invalid graphs before converting
             if not hasattr(graph, 'neighbors') or not graph:
                 invalid_graphs.append(glycan)
                 continue
-            converted_graph = create_glycontact_annotated_graph(glycan, flex_data_pdb_g)
-            flex_data[glycan] = converted_graph
+
+            converted_graph = create_glycontact_annotated_graph(glycan)
+            flex_data[glycan] = converted_graph  # Store the converted graph for the glycan
+
         except Exception as e:
             print(f"Error converting graph for glycan {glycan}: {e}")
-            invalid_graphs.append(glycan)
 
-    return flex_data, invalid_graphs
+    # Load binding data
+    binding_df = pd.read_csv(binding_data_path)
+
+    return flex_data, binding_df, invalid_graphs
+
+def load_data_james():
+    """Load glycan flexibility data and binding data."""
+    with open(flex_data_path, 'rb') as file:
+        flex_data_pdb_g = pickle.load(file)
+
+    def create_glycontact_annotated_graph(glycan,flex_data_pdb_g):
+        gw_graph = glycan_to_nxGraph(glycan)
+        mapper = {}
+        num_nodes = len(gw_graph) - 1
+        for gwork, gcontact in zip(range(num_nodes, -1, -2), range(2, num_nodes)):
+            mapper[gcontact] = gwork
+        try:
+            flex_score_dict = nx.get_node_attributes(flex_data_pdb_g[glycan], 'weighted_mean_flexibility')
+        except KeyError:
+            raise KeyError('This glycan is not present in the flex database')
+        gw_flex_score_dict = {mapper[gcontact_node]: score for gcontact_node, score in flex_score_dict.items() if
+                              gcontact_node in mapper}
+        nx.set_node_attributes(gw_graph, gw_flex_score_dict, 'weighted_mean_flexibility')
+        return gw_graph
+
+    flex_data = {}
+    invalid_graphs = []  # List to store invalid graphs
+
+    for glycan, graph in zip(flex_data_pdb_g.keys(), flex_data_pdb_g.values()):  # Ensure correct glycan-graph pairing
+        try:
+            # Skip invalid graphs before converting
+            if not hasattr(graph, 'neighbors') or not graph:
+                invalid_graphs.append(glycan)
+                continue
+
+            converted_graph = create_glycontact_annotated_graph(glycan,flex_data_pdb_g)
+            flex_data[glycan] = converted_graph  # Store the converted graph for the glycan
+
+        except Exception as e:
+            print(f"Error converting graph for glycan {glycan}: {e}")
+
+    # Load binding data
+    binding_df = pd.read_csv(binding_data_path)
+
+    return flex_data, binding_df, invalid_graphs
 
 
-def create_glycontact_annotated_graph(glycan: str, flex_data_pdb_g: Dict[str, nx.Graph]) -> nx.Graph:
-    """Create a glyco-contact annotated graph with flexibility attributes."""
-    glycowork_graph = glycan_to_nxGraph(glycan)
-    num_nodes = len(glycowork_graph) - 1
-    mapper = {gcontact: gwork for gwork, gcontact in zip(range(num_nodes, -1, -2), range(2, num_nodes))}
 
+def convert_pdb_graph_to_glycowork(g):
+    """
+    Converts a PDB-format graph to glycowork format.
+    Args:
+        g (nx.Graph): Input graph in PDB format with Monosaccharide and score attributes
+    Returns:
+        nx.Graph: Converted graph in glycowork format with monosaccharide/linkage split into separate nodes
+    """
+    new_g = nx.Graph()
+
+    # Find reducing end (node connected to -R node 1)
+    reducing_end = None
+    for n in g.neighbors(1):
+        reducing_end = n
+        break
+
+    if reducing_end is None:
+        raise ValueError("Could not find reducing end (node connected to -R)")
+
+    # Get node list in DFS order starting from reducing end (excluding -R node)
+    nodes = [n for n in nx.dfs_preorder_nodes(g, reducing_end) if n != 1]
+
+    # Create mapping dict
+    mapping = {}
+    mapping[1] = []  # -R maps to nothing
+
+    # Calculate highest node number
+    max_num = 2 * (len(g.nodes) - 2)
+
+    # Map reducing end to highest number
+    mapping[reducing_end] = [max_num]
+
+    # Map rest of nodes in reverse order
+    curr_num = 0
+    for node in reversed(nodes[1:]):  # Skip reducing end
+        mapping[node] = [curr_num, curr_num + 1]
+        curr_num += 2
+
+    # Create nodes in new graph
+    for old_node, new_nodes in mapping.items():
+        if not new_nodes:  # Skip -R
+            continue
+
+        # Get numerical attributes
+        attrs = {k: v for k, v in g.nodes[old_node].items()
+                if k not in ['Monosaccharide', 'string_labels']}
+        mono_link = g.nodes[old_node]['Monosaccharide']
+
+        if len(new_nodes) == 1:  # Reducing end
+            mono = mono_link.split('(')[0]
+            new_g.add_node(new_nodes[0], string_labels=mono, **attrs)
+        else:  # Normal nodes
+            mono = mono_link.split('(')[0]
+            link = mono_link.split('(')[1][:-1]
+
+            new_g.add_node(new_nodes[0], string_labels=mono, **attrs)
+            new_g.add_node(new_nodes[1], string_labels=link, **attrs)
+            new_g.add_edge(new_nodes[0], new_nodes[1])
+
+    # Add edges between components
+    for old_u, old_v in g.edges():
+        new_u = mapping.get(old_u, [])
+        new_v = mapping.get(old_v, [])
+
+        if not new_u or not new_v:  # Skip if either is -R
+            continue
+
+        if len(new_u) == 1:  # u is reducing end
+            u_node = new_u[0]
+        else:
+            u_node = new_u[0]  # Use monosaccharide node
+
+        if len(new_v) == 1:  # v is reducing end
+            v_node = new_v[0]
+        else:
+            v_node = new_v[1]  # Use linkage node
+
+        new_g.add_edge(u_node, v_node)
+
+    return new_g
+
+def function_J(glycan, flex_data_pdb):
+    gw_graph = glycan_to_nxGraph(glycan)
+    mapper = {}
+    num_nodes = len(gw_graph) - 1
+    for gwork, gcontact in zip(range(num_nodes, -1, -2), range(2, num_nodes)):
+        mapper[gcontact] = gwork
     try:
-        node_attributes = {node: flex_data_pdb_g[glycan].nodes[node]
-                           for node in flex_data_pdb_g[glycan].nodes}
+        flex_score_dict = nx.get_node_attributes(flex_data_pdb[glycan], 'weighted_mean_flexibility')
     except KeyError:
-        raise KeyError(f'The glycan {glycan} is not present in the flex database')
+        raise KeyError('This glycan is not present in the flex database')
+    gw_flex_score_dict = {mapper[gcontact_node]: score for gcontact_node, score in flex_score_dict.items() if
+                          gcontact_node in mapper}
+    nx.set_node_attributes(gw_graph, gw_flex_score_dict, 'weighted_mean_flexibility')
+    return gw_graph
 
-    # Map attributes to the glycowork graph nodes
-    flex_attribute_mapping = {
-        mapper[gcontact_node]: attributes
-        for gcontact_node, attributes in node_attributes.items()
-        if gcontact_node in mapper
+def convert_pdb_graph_to_glycowork_J(g):
+    """
+    Converts a PDB-format graph into a glycowork-compatible graph while mapping flexibility scores
+    and ensuring the structure aligns with glycowork conventions.
+
+    Args:
+        g (nx.Graph): Input graph in PDB format representing a glycan.
+
+    Returns:
+        nx.Graph: Output graph in glycowork format with appropriate mappings and flexibility scores.
+    """
+    # Convert the PDB-format glycan to a glycowork-compatible networkx graph
+    glycowork_graph = glycan_to_nxGraph(g)
+
+    # Initialize a mapping dictionary for node remapping
+    mapper = {}
+    num_nodes = len(glycowork_graph) - 1
+
+    # Map PDB graph nodes to glycowork graph nodes
+    for glycowork_node, pdb_node in zip(range(num_nodes, -1, -2), range(2, num_nodes)):
+        mapper[pdb_node] = glycowork_node
+
+    # Retrieve flexibility scores from the PDB graph
+    try:
+        flex_score_dict = nx.get_node_attributes(flex_data_pdb[g], 'weighted_mean_flexibility')
+    except KeyError:
+        raise KeyError('This glycan is not present in the flexibility database.')
+
+    # Map flexibility scores to the corresponding glycowork graph nodes
+    glycowork_flex_score_dict = {
+        mapper[pdb_node]: score
+        for pdb_node, score in flex_score_dict.items()
+        if pdb_node in mapper
     }
 
-    # Assign the mapped attributes to the glycowork graph
-    nx.set_node_attributes(glycowork_graph, flex_attribute_mapping)
+    # Assign the mapped flexibility scores as attributes to the glycowork graph
+    nx.set_node_attributes(glycowork_graph, glycowork_flex_score_dict, 'weighted_mean_flexibility')
+
     return glycowork_graph
+
+
+
+
 
 def filter_binding_data(binding_df: pd.DataFrame, lectin: str) -> pd.DataFrame:
     """Filter the binding DataFrame for the given lectin."""
@@ -228,7 +391,7 @@ def metric_df(lectin, properties):
     """
     Generate a metrics DataFrame for a given lectin and its properties.
     """
-    flex_data, binding_df, invalid_graphs = load_data()
+    flex_data, binding_df, invalid_graphs = load_data_james()
     filtered_df = filter_binding_data(binding_df, lectin)
     if filtered_df.empty:
         print(f"No binding data found for {lectin}.")
@@ -241,7 +404,6 @@ def metric_df(lectin, properties):
     metric_df.set_index('glycan', inplace=True)
     metric_df.to_excel(f'scripts/correlation/metric_df/{lectin}_metrics.xlsx', index=True, header=True)
     return metric_df
-
 sys.stdout = open('scripts/correlation/metric_df/metric_df.log', 'w')
 
 def perform_mediation_analysis_with_class(metric_df, independent_var, class_var, dependent_var):
