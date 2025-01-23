@@ -1,4 +1,3 @@
-
 import pickle
 from typing import Dict, Tuple, List
 import numpy as np
@@ -12,102 +11,64 @@ from networkx.classes import Graph
 import networkx as nx
 from sklearn.preprocessing import LabelEncoder
 
+
+# File paths
 FLEX_DATA_PATH = 'data/glycan_graphs.pkl'
 BINDING_DATA_PATH = 'data/20241206_glycan_binding.csv'
 
 
-def load_data_pdb():
-    """Load glycan flexibility data from PDB source."""
-    with open(FLEX_DATA_PATH, 'rb') as file:
-        return pickle.load(file)
+def load_data() -> Tuple[Dict[str, nx.Graph], pd.DataFrame, List[str]]:
+    """Load glycan flexibility data, convert graphs, and load binding data."""
+    flex_data, invalid_graphs = load_and_convert_flex_data(FLEX_DATA_PATH)
+    binding_df = pd.read_csv(BINDING_DATA_PATH)
+    return flex_data, binding_df, invalid_graphs
 
 
-def remove_and_concatenate_labels(graph):
-    """Modify the graph by removing and concatenating labels for odd-indexed nodes."""
-    nodes_to_remove = []
-    for node in sorted(graph.nodes):
-        if node % 2 == 1:
-            neighbors = list(graph.neighbors(node))
-            if len(neighbors) > 1:
-                for i in range(len(neighbors)):
-                    for j in range(i + 1, len(neighbors)):
-                        graph.add_edge(neighbors[i], neighbors[j])
-            predecessor = node - 1
-            if predecessor in graph.nodes:
-                predecessor_label = graph.nodes[predecessor].get("string_labels", "")
-                current_label = graph.nodes[node].get("string_labels", "")
-                graph.nodes[predecessor]["string_labels"] = f"{predecessor_label}({current_label})"
-            nodes_to_remove.append(node)
-    graph.remove_nodes_from(nodes_to_remove)
+def load_and_convert_flex_data(file_path: str) -> Tuple[Dict[str, nx.Graph], List[str]]:
+    """Load glycan flexibility data and convert valid graphs."""
+    with open(file_path, 'rb') as file:
+        flex_data_pdb_g = pickle.load(file)
+
+    flex_data = {}
+    invalid_graphs = []
+
+    for glycan, graph in flex_data_pdb_g.items():
+        try:
+            # Skip invalid graphs
+            if not hasattr(graph, 'neighbors') or not graph:
+                invalid_graphs.append(glycan)
+                continue
+            converted_graph = create_glycontact_annotated_graph(glycan, flex_data_pdb_g)
+            flex_data[glycan] = converted_graph
+        except Exception as e:
+            print(f"Error converting graph for glycan {glycan}: {e}")
+            invalid_graphs.append(glycan)
+
+    return flex_data, invalid_graphs
 
 
-def trim_gcontact(graph):
-    """Trim the G_contact graph by removing node 1 and reconnecting its neighbors."""
-    if not isinstance(graph, nx.Graph):
-        raise TypeError(f"Expected G_contact to be a networkx.Graph, but got {type(graph).__name__}")
-    if 1 in graph:
-        neighbors = list(graph.neighbors(1))
-        if len(neighbors) > 1:
-            for i in range(len(neighbors)):
-                for j in range(i + 1, len(neighbors)):
-                    graph.add_edge(neighbors[i], neighbors[j])
-        graph.remove_node(1)
-
-
-def compare_graphs_with_attributes(G_contact, G_work):
-    """Compare two graphs using node attributes and return a mapping dictionary."""
-
-    def node_match(attrs1, attrs2):
-        return 'string_labels' in attrs1 and 'Monosaccharide' in attrs2 and attrs1['string_labels'] in attrs2[
-            'Monosaccharide']
-
-    matcher = nx.isomorphism.GraphMatcher(G_work, G_contact, node_match=node_match)
-    mapping_dict = {node_g2: node_g for node_g, node_g2 in matcher.mapping.items()} if matcher.is_isomorphic() else {}
-    return mapping_dict
-
-
-def create_glycontact_annotated_graph(glycan: str, mapping_dict, flex_data_pdb_g) -> nx.Graph:
-    """Create an annotated glyco-contact graph with flexibility attributes."""
-    if glycan not in flex_data_pdb_g or not isinstance(flex_data_pdb_g[glycan], nx.Graph):
-        raise ValueError(f"Invalid glycan input or glycan not found in flex_data_pdb_g: {glycan}")
-
+def create_glycontact_annotated_graph(glycan: str, flex_data_pdb_g: Dict[str, nx.Graph]) -> nx.Graph:
+    """Create a glyco-contact annotated graph with flexibility attributes."""
     glycowork_graph = glycan_to_nxGraph(glycan)
+    num_nodes = len(glycowork_graph) - 1
+    mapper = {gcontact: gwork for gwork, gcontact in zip(range(num_nodes, -1, -2), range(2, num_nodes))}
+
     try:
-        node_attributes = {node: flex_data_pdb_g[glycan].nodes[node] for node in flex_data_pdb_g[glycan].nodes}
+        node_attributes = {node: flex_data_pdb_g[glycan].nodes[node]
+                           for node in flex_data_pdb_g[glycan].nodes}
     except KeyError:
         raise KeyError(f'The glycan {glycan} is not present in the flex database')
 
-    mapped_attributes = {mapping_dict[node]: attr for node, attr in node_attributes.items() if node in mapping_dict}
-    nx.set_node_attributes(glycowork_graph, mapped_attributes)
+    # Map attributes to the glycowork graph nodes
+    flex_attribute_mapping = {
+        mapper[gcontact_node]: attributes
+        for gcontact_node, attributes in node_attributes.items()
+        if gcontact_node in mapper
+    }
+
+    # Assign the mapped attributes to the glycowork graph
+    nx.set_node_attributes(glycowork_graph, flex_attribute_mapping)
     return glycowork_graph
-
-
-def load_data():
-    """Load glycan flexibility and binding data, process graphs, and return results."""
-    flex_data = load_data_pdb()
-    binding_df = pd.read_csv(BINDING_DATA_PATH)
-    invalid_graphs = [glycan for glycan in flex_data if not isinstance(flex_data[glycan], nx.Graph)]
-    G_mapped = {}
-
-    for glycan, G_contact in flex_data.items():
-        if not hasattr(G_contact, 'neighbors') or not G_contact:
-            invalid_graphs.append(glycan)
-            continue
-
-        try:
-            G_work = glycan_to_nxGraph(glycan)
-        except Exception as e:
-            print(f"Error converting glycan {glycan} to networkx graph: {e}")
-            continue
-
-        remove_and_concatenate_labels(G_work)
-        #G_contact = G_work.copy()
-        trim_gcontact(G_contact)
-        m_dict = compare_graphs_with_attributes(G_contact, G_work)
-        G_mapped[glycan] = create_glycontact_annotated_graph(glycan, m_dict, flex_data)
-
-    return G_mapped, binding_df, invalid_graphs
-
 
 def filter_binding_data(binding_df: pd.DataFrame, lectin: str) -> pd.DataFrame:
     """Filter the binding DataFrame for the given lectin."""
@@ -162,57 +123,60 @@ def process_glycan_with_motifs(matched_glycan: str,
 
     for motif, termini in zip(motifs, termini_list):
         try:
-            is_present, matched_nodes = subgraph_isomorphism(
-                matched_glycan, motif,
-                return_matches=True,
-                termini_list=termini
-            )
-            if not is_present:
+            try:
+                is_present, matched_nodes = subgraph_isomorphism(
+                    matched_glycan, motif,
+                    return_matches=True,
+                    termini_list=termini
+                )
+                if not is_present:
+                    continue
+            except Exception as e:
+                print(f"Subgraph isomorphism error for glycan {matched_glycan} with motif {motif}: {e}")
                 continue
-        except Exception as e:
-            print(f"Subgraph isomorphism error for glycan {matched_glycan} with motif {motif}: {e}")
-            continue
 
-        found_motifs.append(motif)
-        print(f"Processing motif: {motif} for glycan: {matched_glycan}")
+            found_motifs.append(motif)
+            print(f"Processing motif: {motif} for glycan: {matched_glycan}")
 
-        matched_nodes = [node for sublist in matched_nodes for node in sublist] if matched_nodes and isinstance(matched_nodes[0], list) else matched_nodes
-        print(f"Matched nodes: {matched_nodes}")
+            matched_nodes = [node for sublist in matched_nodes for node in sublist] \
+                if isinstance(matched_nodes[0], list) else matched_nodes
+            print(f"Matched nodes: {matched_nodes}")
 
-        pdb_graph = flex_data.get(matched_glycan)
-        if not isinstance(pdb_graph, nx.Graph):
-            print(f"No valid graph found for glycan: {matched_glycan}")
-            continue
+            # Access the graph directly from flex_data
+            pdb_graph = flex_data.get(matched_glycan)
+            if not pdb_graph:
+                print(f"No graph found for glycan: {matched_glycan}")
+                continue
 
-        # Select only monosaccharides (even-indexed nodes)
-        selected_mono = [node for node in matched_nodes if node in pdb_graph.nodes and node % 2 == 0]
-        print(f"Selected monosaccharides: {selected_mono}")
+            selected_mono = [node for node in matched_nodes if node in pdb_graph.nodes]
+            print(f"Selected monosaccharides: {selected_mono}")
 
-        if hasattr(pdb_graph, "nodes"):
-            print(f"Graph nodes: {pdb_graph.nodes(data=True)}")
-            for mono in selected_mono:
-                try:
-                    attributes = pdb_graph.nodes[mono]
-                    monosaccharide = attributes.get('Monosaccharide', "")
-                    if monosaccharide:  # Ensure non-empty monosaccharides
-                        matching_monosaccharides.append(monosaccharide)
+            # Extract attributes from graph nodes
+            if hasattr(pdb_graph, "nodes"):
+                print(f"Graph nodes: {pdb_graph.nodes(data=True)}")
+                for mono in selected_mono:
+                    try:
+                        attributes = pdb_graph.nodes[mono]
+                        #matching_monosaccharides.append(attributes.get("string_labels", ""))
+                        matching_monosaccharides.append(attributes.get('Monosaccharide', ""))
                         sasa_weighted.append(attributes.get("Weighted Score", 0))
                         flexibility_weighted.append(attributes.get("weighted_mean_flexibility", 0))
 
-                    print(f"Matching monosaccharides: {matching_monosaccharides}")
-                    print(f"SASA-weighted scores: {sasa_weighted}")
-                    print(f"Flexibility-weighted scores: {flexibility_weighted}")
-                    print("")
-                except Exception as e:
-                    print(f"Error extracting attributes for node {mono} in glycan {matched_glycan}: {e}")
-        else:
-            print(f"Skipping invalid graph or graph with no nodes for glycan: {matched_glycan}")
+                        print(f"Matching monosaccharides: {matching_monosaccharides}")
+                        print(f"SASA-weighted scores: {sasa_weighted}")
+                        print(f"Flexibility-weighted scores: {flexibility_weighted}")
+                        print("")
+                    except Exception as e:
+                        print(f"Error extracting attributes for node {mono} in glycan {matched_glycan}: {e}")
+            else:
+                print(f"Skipping invalid graph or graph with no nodes for glycan: {matched_glycan}")
+
+        except Exception as e:
+            print(f"General error processing glycan {matched_glycan} with motif {motif}: {e}")
 
     return matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs
 
-
-
-def generate_metrics_for_glycan(properties: str,
+def generate_metrics_for_glycan(properties:str,
                                 glycan_scores: dict,
                                 flex_data: dict[str, Graph]) -> list[dict]:
     """
@@ -233,13 +197,13 @@ def generate_metrics_for_glycan(properties: str,
         matching_monosaccharides, sasa_weighted, flexibility_weighted, found_motifs = process_glycan_with_motifs(
             matched_glycan, properties, flex_data)
 
-        # Skip empty monosaccharides
-        matching_monosaccharides = [m for m in matching_monosaccharides if m.strip()]
-
         if matching_monosaccharides:
             sasa_metrics = compute_sasa_metrics(sasa_weighted)
             overall_flexibility = compute_overall_flexibility(flexibility_weighted)
-            glycan_class = get_class(matched_glycan) or np.nan
+            # write nan if returns an empty string
+            glycan_class = get_class(matched_glycan)
+            #if glycan_class == "":
+             #   glycan_class = np.nan
 
             metric_data.append({
                 "glycan": glycan,
@@ -251,14 +215,13 @@ def generate_metrics_for_glycan(properties: str,
                 "class": glycan_class,
             })
 
-    print(f"Processed {len(metric_data)} glycans with metrics.")
+    print(f"Processed {len(metric_data)} glycans without branches.")
 
     # Report missing glycans
     if missing_glycans:
-        print(f"Not-matched glycan in flex data: {missing_glycans}")
+        print(f"Missing glycans: {missing_glycans}")
 
     return metric_data
-
 
 
 def metric_df(lectin, properties):

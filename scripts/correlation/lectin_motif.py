@@ -47,7 +47,7 @@ for lectin, properties in lectin_binding_motif.items():
     metric_df_[lectin] = metric_df(lectin,properties)
     plot_combined_colors(metric_df_[lectin], lectin, properties["motif"])
     plot_separate_class(metric_df_[lectin], lectin, properties["motif"])
-"""
+
     effects = perform_mediation_analysis_with_class(
     metric_df=metric_df_[lectin],
     independent_var='weighted_mean_flexibility',
@@ -58,15 +58,11 @@ for lectin, properties in lectin_binding_motif.items():
         metric_df=metric_df_[lectin],
         lectin=lectin,
         binding_motif=properties["motif"],
-        independent_var='weighted_mean_flexibility',
-        #independent_var='SASA_weighted_sum',
+        #independent_var='weighted_mean_flexibility',
+        independent_var='SASA_weighted_sum',
         class_var='class',
         dependent_var='binding_score',
         effects=effects
     )
 
-
-
-
-"""
 
